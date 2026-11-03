@@ -41,7 +41,7 @@ def test_setup_open_and_save(server, rasendra):
     new = text.replace('natvā', 'natvāX', 1)
     st, r = server.post('/api/save', {'file': ed, 'baseMtime': info['mtimes'][ed], 'content': new, 'message': 'test edit'}, headers=hdr)
     assert st == 200 and r['commit'], r
-    assert (folder / ed).read_text() == new
+    assert (folder / ed).read_text(encoding='utf-8') == new
     # the file is now newer than what the page loaded: refused
     st, r = server.post('/api/save', {'file': ed, 'baseMtime': info['mtimes'][ed], 'content': text}, headers=hdr)
     assert st == 409 and r['conflict']
@@ -85,12 +85,12 @@ def test_setup_needs_an_edition(server, rasendra):
 
 
 def test_settings_keep_project_defaults_out_of_the_section_file(server, rasendra):
-    (rasendra / 'saktumiva-project.json').write_text(json.dumps({'defaults': {'extraIgnoreTags': ['trailer']}}))
+    (rasendra / 'saktumiva-project.json').write_text(json.dumps({'defaults': {'extraIgnoreTags': ['trailer']}}), encoding='utf-8')
     folder = rasendra / 'chapter1'
     setup_and_open(server, folder)
     st, r = server.post('/api/config', {'apparatus': {'normlem': False}})
     assert st == 200
-    own = json.loads((folder / 'editor.config.json').read_text())
+    own = json.loads((folder / 'editor.config.json').read_text(encoding='utf-8'))
     assert own['apparatus'] == {'normlem': False}
     assert 'trailer' not in own.get('extraIgnoreTags', [])
 

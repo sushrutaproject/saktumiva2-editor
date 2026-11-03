@@ -27,7 +27,7 @@ def test_no_edition_guessed_when_names_do_not_say(rasendra):
 
 def test_guess_reproduces_sushruta_config(sushruta):
     folder = sushruta / '03-su.sa'
-    real = json.loads((folder / 'editor.config.json').read_text())
+    real = json.loads((folder / 'editor.config.json').read_text(encoding='utf-8'))
     cfg = project.guess_config(folder)
     assert cfg['edition'] == real['edition']
     assert cfg['witnesses'] == real['witnesses']
@@ -54,7 +54,7 @@ def test_project_file_lists_sections_and_gives_defaults(rasendra):
     assert [s['rel'] for s in found['sections']] == ['chapter1']
     folder = rasendra / 'chapter1'
     project.write_config(folder, project.guess_config(folder))
-    own = json.loads((folder / 'editor.config.json').read_text())
+    own = json.loads((folder / 'editor.config.json').read_text(encoding='utf-8'))
     cfg = project.load_config(folder)
     assert cfg['extraIgnoreTags'] == ['trailer']
     assert 'apparatus' not in own and 'extraIgnoreTags' not in own

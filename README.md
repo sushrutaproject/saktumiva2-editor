@@ -31,11 +31,6 @@ pipx install git+https://github.com/sushrutaproject/saktumiva2-editor.git
 or, from a release, `pipx install https://github.com/sushrutaproject/saktumiva2-editor/releases/download/v0.1.0/saktumiva_editor-0.1.0-py3-none-any.whl`.
 Then run `saktumiva-editor` in a terminal.
 
-While the repository is private, you need access to it: download release files while signed in to GitHub,
-and install with pipx over SSH, `pipx install git+ssh://git@github.com/sushrutaproject/saktumiva2-editor.git`.
-*Check for updates* then needs a GitHub token: it uses `$GITHUB_TOKEN`, or the login of the GitHub
-command-line tool `gh` if you have it.
-
 **Updating**: *Help → Check for updates* in the editor (or `saktumiva-editor --check-updates`)
 tells you whether there is a newer release and gives the command or download link for the way you installed it.
 

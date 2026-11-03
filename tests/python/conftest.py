@@ -38,8 +38,8 @@ def rasendra(tmp_path):
     ch2.mkdir()
     for f in ['l_london_ch1.txt', 'g_gondal_34_ch1.txt']:
         shutil.copy(ch1 / f, ch2 / f.replace('ch1', 'ch2'))
-    (root / 'README.md').write_text('# Rasendramangala\n')
-    (root / 'quick_start.txt').write_text('not TEI\n')
+    (root / 'README.md').write_text('# Rasendramangala\n', encoding='utf-8')
+    (root / 'quick_start.txt').write_text('not TEI\n', encoding='utf-8')
     git_init(root)
     return root
 

@@ -13,7 +13,7 @@ and works for any project laid out as folders of TEI files, for example the
 ## Install
 
 **Ready-made program** (no Python needed): download the file for your computer from the
-[latest release](https://github.com/wujastyk/saktumiva-editor/releases/latest), unzip it and run
+[latest release](https://github.com/sushrutaproject/saktumiva2-editor/releases/latest), unzip it and run
 `saktumiva-editor` (`saktumiva-editor.exe` on Windows). A terminal window opens, and the editor
 opens in your web browser. Close the terminal window, or press Ctrl+C in it, to stop.
 
@@ -25,11 +25,16 @@ opens in your web browser. Close the terminal window, or press Ctrl+C in it, to 
 **With [pipx](https://pipx.pypa.io)** (Python 3.10 or later; works everywhere):
 
 ```bash
-pipx install git+https://github.com/wujastyk/saktumiva-editor.git
+pipx install git+https://github.com/sushrutaproject/saktumiva2-editor.git
 ```
 
-or, from a release, `pipx install https://github.com/wujastyk/saktumiva-editor/releases/download/v0.1.0/saktumiva_editor-0.1.0-py3-none-any.whl`.
+or, from a release, `pipx install https://github.com/sushrutaproject/saktumiva2-editor/releases/download/v0.1.0/saktumiva_editor-0.1.0-py3-none-any.whl`.
 Then run `saktumiva-editor` in a terminal.
+
+While the repository is private, you need access to it: download release files while signed in to GitHub,
+and install with pipx over SSH, `pipx install git+ssh://git@github.com/sushrutaproject/saktumiva2-editor.git`.
+*Check for updates* then needs a GitHub token: it uses `$GITHUB_TOKEN`, or the login of the GitHub
+command-line tool `gh` if you have it.
 
 **Updating**: *Help → Check for updates* in the editor (or `saktumiva-editor --check-updates`)
 tells you whether there is a newer release and gives the command or download link for the way you installed it.
@@ -162,7 +167,7 @@ your projects: on Linux in `~/.config/saktumiva-editor` and `~/.cache/saktumiva-
 ## Development
 
 ```bash
-git clone --recurse-submodules https://github.com/wujastyk/saktumiva-editor.git
+git clone --recurse-submodules https://github.com/sushrutaproject/saktumiva2-editor.git
 cd saktumiva-editor
 python -m pip install -e ".[test]"
 saktumiva-editor
@@ -209,6 +214,11 @@ By hand: `cd src/saktumiva_editor/app/saktumiva && git fetch && git checkout <co
 
 `.github/workflows/release.yml` then builds the wheel and the programs for Linux, macOS and Windows, checks that
 each one starts, and publishes them as a GitHub Release, where *Check for updates* finds them.
+
+## Licence
+
+The Saktumiva editor is free software under the GNU General Public License, version 3 (see `LICENSE`).
+Saktumiva itself is a separate project with its own terms.
 
 ## Credits
 

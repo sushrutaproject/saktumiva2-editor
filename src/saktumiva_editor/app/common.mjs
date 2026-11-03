@@ -76,5 +76,5 @@ export async function showAbout() {
     h('p', {}, 'A local editing screen for critical editions collated with ',
       h('a', {href: 'https://github.com/chchch/saktumiva', target: '_blank', rel: 'noopener'}, 'Saktumiva'), ' by Charles Li, whose code does the collation and makes the apparatus.'),
     st.patchProblems?.length ? h('p', {class: 'error'}, 'This copy of Saktumiva does not fit the editor’s changes: ', st.patchProblems.join('; ')) : null,
-    h('p', {}, h('a', {href: 'https://github.com/wujastyk/saktumiva-editor', target: '_blank', rel: 'noopener'}, 'github.com/wujastyk/saktumiva-editor')));
+    h('p', {}, h('a', {href: 'https://github.com/sushrutaproject/saktumiva2-editor', target: '_blank', rel: 'noopener'}, 'github.com/sushrutaproject/saktumiva2-editor')));
 }

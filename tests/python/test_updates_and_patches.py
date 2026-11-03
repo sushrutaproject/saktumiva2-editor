@@ -4,6 +4,14 @@ import sys
 from saktumiva_editor import __version__, patches, updates
 
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def no_token(monkeypatch):
+    monkeypatch.setattr(updates, 'github_token', lambda: None)
+
+
 def test_version_order():
     p = updates.parse_version
     assert p('v0.2.0') > p('0.1.9') > p('0.1') == p('v0.1.0')
@@ -72,3 +80,22 @@ def test_patch_must_match_exactly_once():
     assert not problems and 'opts.equivalent(id, newstr, lemma)' in text
     _, problems = patches.apply('lib/apparatus.mjs', once + once)
     assert problems
+
+
+def test_private_or_unreleased(monkeypatch):
+    def fail(req, timeout):
+        raise updates.urllib.error.HTTPError(updates.API, 404, 'Not Found', {}, None)
+    monkeypatch.setattr(updates.urllib.request, 'urlopen', fail)
+    r = updates.check()
+    assert r['newer'] is False and 'private' in r['note']
+
+
+def test_token_is_sent(monkeypatch):
+    seen = {}
+    def fake(req, timeout):
+        seen['auth'] = req.get_header('Authorization')
+        return FakeResponse({**RELEASE, 'tag_name': f'v{__version__}'})
+    monkeypatch.setattr(updates, 'github_token', lambda: 'abc')
+    monkeypatch.setattr(updates.urllib.request, 'urlopen', fake)
+    updates.check()
+    assert seen['auth'] == 'Bearer abc'

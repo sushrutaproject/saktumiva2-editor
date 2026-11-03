@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,6 +8,7 @@ dynamic = ["version"]
 description = "A local editing screen for TEI critical editions collated with Saktumiva"
 readme = "README.md"
 requires-python = ">=3.10"
+license-files = ["LICENSE"]
 authors = [{ name = "Dominik Wujastyk" }]
 dependencies = []
 classifiers = [
@@ -21,7 +22,7 @@ classifiers = [
 test = ["pytest>=8"]
 
 [project.urls]
-Homepage = "https://github.com/wujastyk/saktumiva-editor"
+Homepage = "https://github.com/sushrutaproject/saktumiva2-editor"
 Saktumiva = "https://github.com/chchch/saktumiva"
 
 [project.scripts]

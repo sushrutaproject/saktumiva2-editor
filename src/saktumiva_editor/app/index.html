@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saktumiva editor</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand"><strong>Saktumiva editor</strong> <span id="section" class="muted"></span></div>
+  <div class="spacer"></div>
+  <span id="status" class="status">Loading…</span>
+  <button id="btn-undo" title="Undo (Ctrl+Z)" disabled>Undo</button>
+  <button id="btn-redo" title="Redo (Ctrl+Shift+Z)" disabled>Redo</button>
+  <button id="btn-save" class="primary" title="Save to the TEI file (Ctrl+S)" disabled>Save</button>
+  <button id="btn-publish" title="Write the edition with the full apparatus to a separate file">Publish</button>
+  <button id="btn-history" title="Saved versions (git)">History</button>
+  <button id="btn-info" title="Files and collation settings">Settings</button>
+  <button id="btn-projects" title="Open another project or section">Projects</button>
+  <div class="menu" id="help-menu">
+    <button id="btn-help-menu" aria-haspopup="true" aria-expanded="false" title="Help">Help ▾</button>
+    <div class="menu-items" role="menu" hidden>
+      <button role="menuitem" id="btn-help">Using the editor</button>
+      <button role="menuitem" id="btn-updates">Check for updates…</button>
+      <button role="menuitem" id="btn-about">About</button>
+    </div>
+  </div>
+</header>
+
+<main id="layout">
+  <nav id="passages">
+    <input id="filter" type="search" placeholder="Find passage or words…" autocomplete="off">
+    <div id="passage-list" role="listbox" aria-label="Passages"></div>
+  </nav>
+
+  <section id="centre">
+    <div id="passage-head">
+      <div class="nav">
+        <button id="btn-prev" title="Previous passage (Alt+↑)">◀</button>
+        <h1 id="passage-id"></h1>
+        <button id="btn-next" title="Next passage (Alt+↓)">▶</button>
+        <span id="passage-chapter" class="muted"></span>
+      </div>
+      <div class="tools" id="reading-tools">
+        <button id="btn-edit" title="Edit the text of this passage (E)">Edit text</button>
+        <button id="btn-source" title="Edit this passage as TEI XML">TEI source</button>
+        <button id="btn-note" title="Add a note at the selected word (N)">Add note</button>
+      </div>
+    </div>
+
+    <div id="passage" class="passage" aria-live="polite"></div>
+    <div id="edit-bar" class="edit-bar" hidden>
+      <label><input type="checkbox" id="chk-emend"> Record as emendation (adds a note)</label>
+      <span class="spacer"></span>
+      <button id="btn-edit-cancel">Cancel</button>
+      <button id="btn-edit-done" class="primary">Done</button>
+    </div>
+    <div id="source-box" hidden>
+      <textarea id="source-text" spellcheck="false"></textarea>
+      <div class="edit-bar">
+        <span class="muted">Edit the TEI of this passage. The xml:id must stay the same.</span>
+        <span class="spacer"></span>
+        <button id="btn-source-cancel">Cancel</button>
+        <button id="btn-source-apply" class="primary">Apply</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Apparatus</h2><span id="collate-status" class="muted"></span><span class="spacer"></span>
+        <button id="btn-align" title="Correct how the witnesses are lined up with the text (A)">Correct alignment</button></div>
+      <div id="aligner" hidden>
+        <p class="muted al-help">Each column is one apparatus entry. <b>join</b> merges a column with the next one;
+          click between two syllables of the first row to split a column; <b>‹ ›</b> move a witness's syllable into the
+          neighbouring column. The apparatus below follows your changes.</p>
+        <div id="al-table"></div>
+        <div class="edit-bar">
+          <span id="al-status" class="muted"></span><span class="spacer"></span>
+          <button id="btn-al-undo" disabled>Undo</button>
+          <button id="btn-al-cancel">Cancel</button>
+          <button id="btn-al-save" class="primary" disabled>Save corrected alignment</button>
+        </div>
+      </div>
+      <div id="apparatus"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Notes</h2><span id="notes-count" class="muted"></span></div>
+      <div id="notes"></div>
+    </div>
+  </section>
+
+  <aside id="right">
+    <div class="panel">
+      <div class="panel-head"><h2>Witnesses</h2><span class="muted">this passage</span></div>
+      <div id="witnesses"></div>
+    </div>
+    <div class="panel" id="image-panel" hidden>
+      <div class="panel-head"><h2 id="image-title">Image</h2><button id="btn-image-close" title="Close image">×</button></div>
+      <div id="viewer"></div>
+    </div>
+  </aside>
+</main>
+
+<div id="selection-pop" hidden><button id="btn-pop-note">Add note here</button></div>
+<div id="toast" role="status" hidden></div>
+
+<dialog id="note-dialog">
+  <form method="dialog" id="note-form">
+    <h3 id="note-dialog-title">Add note</h3>
+    <p class="muted" id="note-where"></p>
+    <label>Type
+      <input id="note-type" list="note-types" required autocomplete="off">
+      <datalist id="note-types"></datalist>
+    </label>
+    <label>Note
+      <div class="note-tools"><button type="button" id="btn-foreign" title="Mark the selected words as Sanskrit (&lt;foreign&gt;)">Sanskrit</button><span class="muted">You can type TEI tags such as &lt;foreign&gt;…&lt;/foreign&gt; or &lt;emph&gt;…&lt;/emph&gt;.</span></div>
+      <textarea id="note-text" rows="6" required></textarea>
+    </label>
+    <p id="note-error" class="error" hidden></p>
+    <div class="dialog-buttons">
+      <button type="button" id="btn-note-delete" class="danger" hidden>Delete note</button>
+      <span class="spacer"></span>
+      <button type="button" id="btn-note-cancel">Cancel</button>
+      <button id="btn-note-ok" value="ok" class="primary">Add note</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="publish-dialog">
+  <h3>Publish the edition with its apparatus</h3>
+  <p id="pub-intro" class="muted"></p>
+  <progress id="pub-progress" value="0" max="1"></progress>
+  <p id="pub-status"></p>
+  <div id="pub-result"></div>
+  <div class="dialog-buttons"><span class="spacer"></span>
+    <button id="btn-pub-cancel">Cancel</button>
+    <button id="btn-pub-start" class="primary">Publish</button>
+    <button id="btn-pub-close" class="primary" hidden>Close</button>
+  </div>
+</dialog>
+
+<dialog id="info-dialog"><form method="dialog"><div id="info-body"></div><div class="dialog-buttons outer"><span class="spacer"></span><button class="primary">Close</button></div></form></dialog>
+
+<script type="module" src="main.mjs"></script>
+</body>
+</html>

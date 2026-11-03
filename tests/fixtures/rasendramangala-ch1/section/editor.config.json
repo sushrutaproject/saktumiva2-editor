@@ -1,0 +1,23 @@
+{
+  "edition": "provisional_edition_ch1.txt",
+  "witnesses": [
+    "a1_ahmedabad_ldi_9442_ch1.txt",
+    "a2_ahmedabad_ldi_7753_ch1.txt",
+    "g_gondal_34_ch1.txt",
+    "k1_koba_gb_19113_ch1.txt",
+    "l_london_ch1.txt",
+    "p_bnf_cordier_1222_ch1.txt",
+    "pa_patan_hj_8930_ch1.txt",
+    "r_ch1.txt"
+  ],
+  "alignmentsDir": "alignments",
+  "settingsFrom": null,
+  "extraIgnoreTags": [],
+  "apparatus": {
+    "normlem": true,
+    "mergerdgs": true
+  },
+  "writeAlignments": true,
+  "publishStylesheet": null,
+  "publishPolyfill": false
+}

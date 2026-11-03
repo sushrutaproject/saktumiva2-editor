@@ -1,0 +1,26 @@
+{
+  "edition": "provisional-edition_sarirasthana_new.xml",
+  "witnesses": [
+    "03-za-vulgate-1938.xml",
+    "kl_699_sarirasthana.xml",
+    "nak_1-1079_sarirasthana.xml",
+    "nak_5-333_sarirasthana.xml",
+    "pul_7082_sarirasthana.xml"
+  ],
+  "alignmentsDir": "alignments",
+  "settingsFrom": "alignments/SS.3.4.96.xml",
+  "extraIgnoreTags": [
+    "trailer"
+  ],
+  "apparatus": {
+    "normlem": true,
+    "mergerdgs": true,
+    "maxomlength": null,
+    "scriptNotes": true,
+    "sameLetters": "",
+    "showMinor": true
+  },
+  "writeAlignments": true,
+  "publishTo": "provisional-edition_sarirasthana.xml",
+  "publishStylesheet": "edition.xsl"
+}

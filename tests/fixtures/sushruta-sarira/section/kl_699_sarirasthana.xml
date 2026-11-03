@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="tei-to-html.xsl"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+<script src="./lib/js/xslt-polyfill.min.js" xmlns="http://www.w3.org/1999/xhtml"></script>
+    <teiHeader xmlns="http://www.tei-c.org/ns/1.0">
+        <fileDesc>
+            <titleStmt>
+                <title>MS Kathmandu KL 699: Śārīrasthāna</title>
+            </titleStmt>
+            <publicationStmt>
+                <p>Suśruta project, University of Alberta</p>
+            </publicationStmt>
+            <sourceDesc>
+                <msDesc>
+                    <msIdentifier>
+                        <placeName>
+                            <settlement>Kathmandu</settlement>
+                            <country>Nepal</country>
+                        </placeName>
+                        <institution>Kaiser Library</institution>
+                        <repository>https://www.klib.gov.np/</repository>
+                        <idno>699</idno>
+                        <idno type="siglum">K</idno>
+                    </msIdentifier>
+                    <msContents>
+                        <summary>[description of manuscript]</summary>
+                        <msItem defective="true" n="1">
+                            <!-- @defective: 'false' for complete, 'true' for incomplete -->
+                            <author role="author" xml:lang="sa">Suśruta</author>
+                            <title xml:lang="sa">Suśrutasaṃhitā</title>
+                            <!-- rubric, incipit, explicit, and finalRubric are given as examples -->
+                            <textLang mainLang="sa-Newa">Sanskrit in Nepalese script.</textLang>
+                            <!-- @mainLang can be "sa-Deva", "sa-Mlym", "sa-Telu", "sa-Newa", etc. See ISO 15924 for more details. -->
+                        </msItem>
+                    </msContents>
+
+                    <physDesc>
+
+                        <objectDesc form="pothi">
+                            <!-- @form can be "pothi", "book", scroll", etc. -->
+                            <supportDesc material="palm-leaf"><!-- @material can be "paper", "industrial paper", "handmade paper", "palm-leaf", "palmyra palm-leaf", "talipot palm-leaf", "birch bark", "vellum", etc. --><!-- the following <foliation> tags are examples --></supportDesc>
+
+                        </objectDesc>
+
+                        <scriptDesc>
+                            <scriptNote xml:id="script-śa-sa"><foreign xml:lang="sa">śa</foreign>
+                                and <foreign xml:lang="sa">sa</foreign> not
+                                distinguished.</scriptNote>
+                        </scriptDesc>
+                        <!--                     this śa/sa equivalence may be wrong. Still checking, 2021-06-12  - DW -->
+
+                    </physDesc>
+                    <history>
+                        <origin>
+                            <origDate calendar="Nepal" when="0301">M Saṃvat 301 (878 CE).</origDate>
+                            <!-- calendar can be "Vikrama", "Śaka", etc. Dates can be approximate or exact. -->
+                        </origin>
+                    </history>
+
+                </msDesc>
+
+            </sourceDesc>
+        </fileDesc>
+        <encodingDesc>
+            <charDecl>
+                <char xml:id="newa-comma">
+                    <unicodeProp name="Name" value="NEWA COMMA"/>
+                    <mapping type="Unicode">&#x1144D;</mapping>
+                </char>
+                <char xml:id="newa-double-comma">
+                    <unicodeProp name="Name" value="NEWA DOUBLE COMMA"/>
+                    <mapping type="Unicode">&#x1145A;</mapping>
+                </char>
+                <char xml:id="newa-gap-filler">
+                    <unicodeProp name="Name" value="NEWA GAP FILLER"/>
+                    <mapping type="Unicode">&#x1144E;</mapping>
+                </char>
+                <char xml:id="newa-placeholder-mark">
+                    <unicodeProp name="Name" value="NEWA PLACEHOLDER MARK"/>
+                    <mapping type="Unicode">&#x1145B;</mapping>
+                </char>
+                <char xml:id="newa-siddhi">
+                    <unicodeProp name="Name" value="NEWA SIDDHI"/>
+                    <mapping type="Unicode">&#x1144A;</mapping>
+                </char>
+                <char xml:id="newa-sign-final-anusvara">
+                    <unicodeProp name="Name" value="NEWA SIGN FINAL ANUSVARA"/>
+                    <mapping type="Unicode">&#x11448;</mapping>
+                </char>
+                <glyph xml:id="newa-old-gap-filler">
+                    <desc>Older form of the Newa gap filler, as written in this manuscript.</desc>
+                    <localProp name="Name" value="NEWA GAP FILLER, OLDER FORM"/>
+                    <mapping type="standard">&#x1144E;</mapping>
+                </glyph>
+                <glyph xml:id="broken-danda">
+                    <desc>Broken form of the daṇḍa, written as a daṇḍa with a gap in it.</desc>
+                    <localProp name="Name" value="BROKEN DANDA"/>
+                    <mapping type="standard">&#x1144B;</mapping>
+                </glyph>
+                <glyph xml:id="upadhmaniya">
+                    <desc>The Sanskrit upadhmaniya character in Newa script</desc>
+                    <localProp name="Upadhmaniya" value="UPADHMANIYA"></localProp>
+                    <mapping type="standard">&#x1CF6;</mapping>
+                </glyph>
+            </charDecl>
+        </encodingDesc>
+
+        <revisionDesc>
+            <change when="2021-08-19" who="Madhusudana Rimal">Added transcription of 3.1</change>
+            <change when="2025-04-28" who="Deepro Chakraborty">Modified the milestone tag</change>
+            			       <change when="2026-04-25" who="Dominik Wujastyk">Completed adding and checking page-begin pb elements
+                with @facs attributes that match the IIIF image numbers delivered from
+                archive.org.</change>
+
+        </revisionDesc>
+
+    </teiHeader>
+
+    <text xml:lang="sa-Latn-t-sa-Deva">
+
+        <body>
+            <div n="3" type="sthāna">
+
+                <div n="16" subtype="adhyāya">
+
+                    <milestone facs="068vIMG_0108.JPG" unit="folio"/>
+                    
+                    <pb facs="48" n="68v: line 7, end of folio"/>
+
+                    <lg xml:id="SS.3.1.1"><l>athātaḥ sarvabhūtacintāṃ śārīraṃ <abbr>vyākhyā</abbr><ex>syāmaḥ</ex>
+                         || </l></lg>
+               
+                    
+            <!--     MS K is not available from here on in the śārīrasthāna -->
+            
+                </div>
+            </div>
+        </body>
+    </text>
+     <facsimile>
+		<graphic url="https://iiif.archive.org/iiif/699-updated-filenames/manifest.json"/>
+    </facsimile>
+</TEI>

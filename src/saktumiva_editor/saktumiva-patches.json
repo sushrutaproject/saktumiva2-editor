@@ -1,0 +1,11 @@
+{
+  "_comment": "Changes the editor makes to Saktumiva's code as it serves it (the submodule itself is never modified). Each 'find' is a regular expression that must match exactly once; the regression tests fail if it no longer does.",
+  "patches": [
+    {
+      "file": "lib/apparatus.mjs",
+      "why": "opts.equivalent: per-witness equivalences (scriptNote rules, 'same letters', normalizations added after alignment) when deciding whether a reading agrees with the lemma",
+      "find": "if\\s*\\(\\s*newstr\\s*===\\s*lemma\\s*\\)\\s*\\{",
+      "replace": "/* [Saktumiva editor] opts.equivalent */ if(newstr === lemma || (opts.equivalent && opts.equivalent(id, newstr, lemma))) {"
+    }
+  ]
+}

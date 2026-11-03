@@ -1,0 +1,4 @@
+[submodule "src/saktumiva_editor/app/saktumiva"]
+	path = src/saktumiva_editor/app/saktumiva
+	url = https://github.com/chchch/saktumiva.git
+	branch = main

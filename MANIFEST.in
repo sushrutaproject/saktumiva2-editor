@@ -1,0 +1,5 @@
+include README.md
+include src/saktumiva_editor/saktumiva-patches.json
+recursive-include src/saktumiva_editor/app *.html *.mjs *.css
+graft src/saktumiva_editor/app/saktumiva/lib
+graft src/saktumiva_editor/app/saktumiva/editmode/openseadragon

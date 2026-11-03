@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "saktumiva-editor"
+dynamic = ["version"]
+description = "A local editing screen for TEI critical editions collated with Saktumiva"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Dominik Wujastyk" }]
+dependencies = []
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Environment :: Web Environment",
+  "Topic :: Text Processing :: Markup :: XML",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.urls]
+Homepage = "https://github.com/wujastyk/saktumiva-editor"
+Saktumiva = "https://github.com/chchch/saktumiva"
+
+[project.scripts]
+saktumiva-editor = "saktumiva_editor.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "saktumiva_editor.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.package-data]
+saktumiva_editor = [
+  "saktumiva-patches.json",
+  "app/*.html", "app/*.mjs", "app/*.css",
+  # only the parts of Saktumiva the editor loads
+  "app/saktumiva/lib/**/*",
+  "app/saktumiva/editmode/openseadragon/**/*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/python"]

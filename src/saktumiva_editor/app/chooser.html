@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choose a project · Saktumiva editor</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="chooser">
+<header id="topbar">
+  <div class="brand"><strong>Saktumiva editor</strong> <span class="muted">— choose what to edit</span></div>
+  <div class="spacer"></div>
+  <a id="back" class="button" href="/" hidden></a>
+  <div class="menu" id="help-menu">
+    <button id="btn-help-menu" aria-haspopup="true" aria-expanded="false" title="Help">Help ▾</button>
+    <div class="menu-items" role="menu" hidden>
+      <button role="menuitem" id="btn-help">Projects and sections</button>
+      <button role="menuitem" id="btn-updates">Check for updates…</button>
+      <button role="menuitem" id="btn-about">About</button>
+    </div>
+  </div>
+</header>
+<main id="chooser"></main>
+<div id="toast" role="status" hidden></div>
+<script type="module" src="chooser.mjs"></script>
+</body>
+</html>

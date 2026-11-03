@@ -1,0 +1,15 @@
+{
+ "error": null,
+ "listApp": "<listApp xmlns=\"http://www.tei-c.org/ns/1.0\">\n  <app loc=\"38,46\">\n    <rdgGrp type=\"lemma\" select=\"#H\">\n      <lem>tathaiva</lem>\n      <rdg type=\"minor\" wit=\"#H\"><caesura/> tathaiva</rdg>\n    </rdgGrp>\n    <rdg wit=\"#A\"><caesura/> dhama</rdg>\n  </app>\n  <app loc=\"46,51\">\n    <lem wit=\"#H\">tāsāṃ</lem>\n    <rdg wit=\"#A\">nīnāṃ</rdg>\n  </app>\n  <app loc=\"51,58\">\n    <lem wit=\"#H\">dvārāṇi</lem>\n    <rdg wit=\"#A\">tathā khāni</rdg>\n  </app>\n</listApp>",
+ "listWit": "<listWit xmlns=\"http://www.tei-c.org/ns/1.0\">\n<witness xml:id=\"A\" source=\"03-za-vulgate-1938.xml\">\n<abbr>A</abbr>\n<expan>Printed edition: Ācārya 1938: Śārīrasthāna</expan>\n</witness>\n<witness xml:id=\"K\" source=\"kl_699_sarirasthana.xml\">\n<abbr>K</abbr>\n<expan>MS Kathmandu KL 699: Śārīrasthāna</expan>\n</witness>\n<witness xml:id=\"N\" source=\"nak_1-1079_sarirasthana.xml\">\n<abbr>N</abbr>\n<expan>MS Kathmandu NAK 1-1079: Śārīrasthāna</expan>\n<listWit>\n<witness xml:id=\"Nac\" n=\"ac\">\n<abbr>Nac</abbr>\n<expan>MS Kathmandu NAK 1-1079: Śārīrasthāna [ante correctionem]</expan>\n</witness>\n<witness xml:id=\"Npc\" n=\"pc\">\n<abbr>Npc</abbr>\n<expan>MS Kathmandu NAK 1-1079: Śārīrasthāna [post correctionem]</expan>\n</witness>\n</listWit>\n</witness>\n<witness xml:id=\"H\" source=\"nak_5-333_sarirasthana.xml\">\n<abbr>H</abbr>\n<expan>MS Kathmandu NAK 5-333: Śārīrasthāna</expan>\n<listWit>\n<witness xml:id=\"Hac\" n=\"ac\">\n<abbr>Hac</abbr>\n<expan>MS Kathmandu NAK 5-333: Śārīrasthāna [ante correctionem]</expan>\n</witness>\n<witness xml:id=\"Hpc\" n=\"pc\">\n<abbr>Hpc</abbr>\n<expan>MS Kathmandu NAK 5-333: Śārīrasthāna [post correctionem]</expan>\n</witness>\n</listWit>\n</witness>\n<witness xml:id=\"NE\" source=\"provisional-edition_sarirasthana_new.xml\">\n<abbr>NE</abbr>\n<expan>The Nepalese Version of the Suśrutasaṃhitā, Śārīrasthāna, based on\n                    the Nepalese MSS, new edition (NE)</expan>\n</witness>\n</listWit>",
+ "warnings": [
+  "SS.3.9.10: H doesn't match alignment."
+ ],
+ "mismatch": true,
+ "witMismatch": true,
+ "rows": [
+  "H",
+  "A",
+  "NE"
+ ]
+}

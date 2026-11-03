@@ -1,0 +1,110 @@
+name: Release
+
+# Push a tag such as v0.2.0 (matching __version__ in src/saktumiva_editor/__init__.py).
+# This builds the wheel and the ready-made programs and publishes them as a GitHub Release,
+# which is what "Help → Check for updates" looks at.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          submodules: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Tag matches the version in the code
+        run: |
+          v=$(python -c "import sys; sys.path.insert(0,'src'); import saktumiva_editor as s; print(s.__version__)")
+          test "v$v" = "$TAG" || { echo "Tag $TAG does not match __version__ $v"; exit 1; }
+      - run: python -m pip install build pytest
+      - run: python -m pytest -q
+      - run: python -m build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-package
+          path: dist/*
+
+  executables:
+    name: Program for ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04, name: linux-x86_64 }
+          - { os: macos-latest, name: macos-arm64 }
+          - { os: windows-latest, name: windows-x86_64 }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          submodules: true
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install . pyinstaller
+      - name: Build
+        run: pyinstaller --onefile --name saktumiva-editor --collect-data saktumiva_editor --console packaging/entry.py
+      - name: The program starts
+        shell: bash
+        run: |
+          ./dist/saktumiva-editor --version
+          ./dist/saktumiva-editor --no-browser --port 8899 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8899/api/state && break; sleep 1; done
+          curl -sf http://127.0.0.1:8899/saktumiva/lib/apparatus.mjs | grep -q "opts.equivalent(id, newstr, lemma)"
+          kill %1 || true
+      - name: Package (Linux, macOS)
+        if: runner.os != 'Windows'
+        run: |
+          v=${TAG#v}
+          cd dist && zip -9 "saktumiva-editor-$v-${{ matrix.name }}.zip" saktumiva-editor
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $v = $env:TAG.TrimStart('v')
+          Compress-Archive -Path dist/saktumiva-editor.exe -DestinationPath "dist/saktumiva-editor-$v-${{ matrix.name }}.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: program-${{ matrix.name }}
+          path: dist/*.zip
+
+  release:
+    needs: [wheel, executables]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v8
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la assets
+          notes=$(awk -v v="${TAG#v}" '$0 ~ "^## "v {f=1; next} /^## / {f=0} f' CHANGELOG.md)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" assets/* --clobber
+          else
+            gh release create "$TAG" assets/* --title "Saktumiva editor ${TAG#v}" --notes "${notes:-See CHANGELOG.md}"
+          fi

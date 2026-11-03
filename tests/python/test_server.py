@@ -41,7 +41,7 @@ def test_setup_open_and_save(server, rasendra):
     new = text.replace('natvā', 'natvāX', 1)
     st, r = server.post('/api/save', {'file': ed, 'baseMtime': info['mtimes'][ed], 'content': new, 'message': 'test edit'}, headers=hdr)
     assert st == 200 and r['commit'], r
-    assert (folder / ed).read_text(encoding='utf-8') == new
+    assert (folder / ed).read_bytes() == new.encode('utf-8')   # written exactly as sent, line endings too
     # the file is now newer than what the page loaded: refused
     st, r = server.post('/api/save', {'file': ed, 'baseMtime': info['mtimes'][ed], 'content': text}, headers=hdr)
     assert st == 409 and r['conflict']

@@ -10,7 +10,7 @@ It was written for the [Suśrutasaṃhitā](https://github.com/sushrutaproject1/
 and works for any project laid out as folders of TEI files, for example the
 [Rasendramaṅgala](https://github.com/wujastyk/Rasendramangala).
 
-<img width="1907" height="721" alt="image" src="https://github.com/user-attachments/assets/315f60d2-1ced-475c-b555-e36c4bdcc09a" />
+![Screenshot of the editor](https://github.com/user-attachments/assets/315f60d2-1ced-475c-b555-e36c4bdcc09a)
 
 
 ## Install

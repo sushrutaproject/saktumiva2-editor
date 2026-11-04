@@ -267,29 +267,35 @@ def _recent_file() -> Path:
     return paths.config_dir() / 'recent.json'
 
 
+RECENT_MAX = 6
+
+
 def recent() -> list:
+    """Recently opened sections, most recent first (one entry per section folder)."""
     data = read_json(_recent_file())
     items = data if isinstance(data, list) else []
     for it in items:
         it['exists'] = Path(it.get('section') or it.get('root') or '').is_dir()
-    return items
+    return items[:RECENT_MAX]
 
 
-def remember(root: Path, section: Path):
-    items = [it for it in recent() if it.get('root') != str(root)]
-    items.insert(0, {'root': str(root), 'name': project_name(root), 'section': str(section),
-                     'sectionName': section.name, 'opened': time.strftime('%Y-%m-%d %H:%M')})
+def _write_recent(items: list):
     for it in items:
         it.pop('exists', None)
     f = _recent_file()
     f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text(json.dumps(items[:15], indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+    f.write_text(json.dumps(items[:RECENT_MAX], indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
 
 
-def forget(root: str):
-    items = [it for it in recent() if it.get('root') != root]
-    for it in items:
-        it.pop('exists', None)
-    f = _recent_file()
-    if f.exists():
-        f.write_text(json.dumps(items, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+def remember(root: Path, section: Path):
+    items = [it for it in recent() if (it.get('section') or it.get('root')) != str(section)]
+    items.insert(0, {'root': str(root), 'name': project_name(root), 'section': str(section),
+                     'sectionName': section.name, 'opened': time.strftime('%Y-%m-%d %H:%M')})
+    _write_recent(items)
+
+
+def forget(section: str):
+    """Remove one entry (by its section folder; an old-style entry by its project folder)."""
+    items = [it for it in recent() if (it.get('section') or it.get('root')) != section]
+    if _recent_file().exists():
+        _write_recent(items)

@@ -28,15 +28,15 @@ async function openSection(folder) {
 async function home() {
   const {recent} = await get('/api/recent');
   const list = recent.length ? h('ul', {class: 'choices'}, ...recent.map(it => h('li', {class: it.exists ? '' : 'gone'},
-    h('button', {class: 'choice', disabled: !it.exists, onclick: () => go({project: it.root})},
-      h('b', {}, it.name), h('span', {class: 'muted'}, ` ${it.root}`),
-      h('span', {class: 'small muted'}, it.exists ? `last edited: ${it.sectionName} · ${it.opened}` : 'folder not found')),
-    it.exists ? h('button', {title: `Edit ${it.sectionName} again`, onclick: () => openSection(it.section)}, `Open ${it.sectionName}`) : null,
+    h('button', {class: 'choice', disabled: !it.exists, title: `Edit ${it.sectionName} again`, onclick: () => openSection(it.section)},
+      h('span', {}, h('b', {}, it.sectionName), h('span', {class: 'muted'}, ` — ${it.name}`)),
+      h('span', {class: 'small muted'}, it.exists ? `${it.section} · last opened ${it.opened}` : `${it.section} · folder not found`)),
+    it.exists ? h('button', {title: `All sections of ${it.name}`, onclick: () => go({project: it.root})}, 'Project…') : null,
     h('button', {class: 'ghost', title: 'Remove from this list (nothing is deleted)', onclick: async () => {
-      await post('/api/recent/forget', {root: it.root}); home(); }}, '×'))))
+      await post('/api/recent/forget', {section: it.section || it.root}); home(); }}, '×'))))
     : h('p', {class: 'muted'}, 'No projects yet. Choose a folder below.');
   main.replaceChildren(
-    card(h('h2', {}, 'Recent projects'), list),
+    card(h('h2', {}, 'Recently opened'), list),
     card(h('h2', {}, 'Open a folder'),
       h('p', {class: 'muted'}, 'A project folder (for example a git repository with one folder per chapter), or one section folder with an edition and its witnesses.'),
       h('form', {class: 'pathform', onsubmit: e => { e.preventDefault(); const p = $('#path').value.trim(); if (p) go({project: p}); }},

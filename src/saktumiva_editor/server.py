@@ -345,7 +345,7 @@ class Handler(SimpleHTTPRequestHandler):
             with self.lock:
                 return self._setup(req)
         if u.path == '/api/recent/forget':
-            project.forget(str(req.get('root') or ''))
+            project.forget(str(req.get('section') or req.get('root') or ''))
             return self._json({'ok': True})
         if self._stale():
             return self._refuse_stale()

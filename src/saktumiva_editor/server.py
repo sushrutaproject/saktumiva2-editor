@@ -208,6 +208,8 @@ class Handler(SimpleHTTPRequestHandler):
                                'install': updates.install_kind(), 'patchProblems': patches.check_all()})
         if u.path == '/api/recent':
             return self._json({'recent': project.recent()})
+        if u.path == '/api/prefs':
+            return self._json({'prefs': project.prefs()})
         if u.path == '/api/browse':
             return self._browse(q.get('path'))
         if u.path == '/api/project':
@@ -344,6 +346,11 @@ class Handler(SimpleHTTPRequestHandler):
         if u.path == '/api/setup':
             with self.lock:
                 return self._setup(req)
+        if u.path == '/api/prefs':
+            if not isinstance(req, dict):
+                return self._json({'ok': False, 'errors': ['bad request']}, 400)
+            with self.lock:
+                return self._json({'ok': True, 'prefs': project.set_prefs(req)})
         if u.path == '/api/recent/forget':
             project.forget(str(req.get('section') or req.get('root') or ''))
             return self._json({'ok': True})

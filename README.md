@@ -111,6 +111,8 @@ online until you push. Work cycle: edit → Publish → check the published file
 * **Witnesses** (right): each witness's text of the passage, with a button that opens the page image,
   and **edit**, which corrects the witness's own transcription of the passage (as TEI). That is saved
   at once to the witness file, with a git commit, and the passage is collated again.
+  Drag a witness by its handle (⠿) to reorder the list; the order is remembered. Witnesses that lack the
+  passage are listed last.
 * **Publish** (top bar): writes the edition with the full apparatus to a separate file, by default
   `<edition>_with-apparatus.xml` in the section folder (set `"publishTo"` in `editor.config.json` to change
   it). It is your edition file exactly as written, plus the stylesheet header, the witnesses in `<listWit>`

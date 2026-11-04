@@ -299,3 +299,25 @@ def forget(section: str):
     items = [it for it in recent() if (it.get('section') or it.get('root')) != section]
     if _recent_file().exists():
         _write_recent(items)
+
+
+# ------------------------------------------------------------------ preferences
+
+PREF_KEYS = {'witnessOrder'}
+
+
+def prefs() -> dict:
+    """The user's preferences (in the editor's own folder, shared by all projects)."""
+    data = read_json(paths.config_dir() / 'prefs.json')
+    return data if isinstance(data, dict) else {}
+
+
+def set_prefs(changes: dict) -> dict:
+    data = prefs()
+    for k, v in changes.items():
+        if k in PREF_KEYS:
+            data[k] = v
+    f = paths.config_dir() / 'prefs.json'
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+    return data

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* Witnesses panel: drag a witness by its handle (⠿) to change the order. The order is remembered for all
+  projects (in the editor's preferences, not in the project). Witnesses that lack the current passage are always
+  listed last.
+
 ## 0.2.0
 
 * "Recently opened" on the start page now lists up to six sections, most recent first, instead of one entry

@@ -120,6 +120,11 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .wit .wtext del { color: var(--bad); }
 .wit .wtext ins { color: var(--ok); text-decoration: none; vertical-align: super; font-size: .8em; }
 .wit.hl { background: var(--accent-soft); }
+.wit .wgrip { cursor: grab; color: var(--muted); user-select: none; font-size: 14px; line-height: 1; }
+.wit.dragging { opacity: .45; }
+.wit.drop-before { box-shadow: inset 0 3px 0 var(--accent); }
+.wit.drop-after { box-shadow: inset 0 -3px 0 var(--accent); }
+.wit.absent .wsig { color: var(--muted); }
 .wit button { font-size: 12px; padding: 1px 8px; }
 #viewer { height: 460px; background: #111; border-radius: 8px; }
 

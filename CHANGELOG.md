@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* "Recently opened" on the start page now lists up to six sections, most recent first, instead of one entry
+  per project (which kept only the last section opened in each project). Each entry opens its section directly;
+  "Project…" shows the project's other sections.
+
 ## 0.1.0
 
 First release as a package.

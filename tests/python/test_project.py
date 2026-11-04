@@ -70,10 +70,19 @@ def test_section_folder_shows_its_whole_project(sushruta):
     assert [s['rel'] for s in found['sections']] == ['03-su.sa']
 
 
-def test_recent_projects(rasendra):
+def test_recent_projects(rasendra, tmp_path):
     project.remember(rasendra, rasendra / 'chapter1')
     project.remember(rasendra, rasendra / 'chapter2')
     items = project.recent()
-    assert len(items) == 1 and items[0]['sectionName'] == 'chapter2' and items[0]['exists']
-    project.forget(str(rasendra))
-    assert project.recent() == []
+    # one entry per section, most recent first
+    assert [it['sectionName'] for it in items] == ['chapter2', 'chapter1'] and items[0]['exists']
+    project.remember(rasendra, rasendra / 'chapter1')
+    assert [it['sectionName'] for it in project.recent()] == ['chapter1', 'chapter2']
+    # at most six
+    for i in range(8):
+        (tmp_path / f's{i}').mkdir()
+        project.remember(tmp_path, tmp_path / f's{i}')
+    items = project.recent()
+    assert len(items) == project.RECENT_MAX == 6 and items[0]['sectionName'] == 's7'
+    project.forget(items[0]['section'])
+    assert [it['sectionName'] for it in project.recent()][:2] == ['s6', 's5']

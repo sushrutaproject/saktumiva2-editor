@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 * "Recently opened" on the start page now lists up to six sections, most recent first, instead of one entry
   per project (which kept only the last section opened in each project). Each entry opens its section directly;
   "Project…" shows the project's other sections.
+* Saktumiva updated to commit ed701a3 (Dependabot, pull request #1).
 
 ## 0.1.0
 

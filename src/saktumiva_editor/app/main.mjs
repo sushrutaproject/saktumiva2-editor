@@ -76,6 +76,7 @@ async function load() {
   const info = await resp.json();
   S.folder = info.folder; S.version = info.version;
   S.cfg = info.config; S.gitOn = info.git; S.editionFile = S.cfg.edition; S.publishTo = info.publishTo;
+  try { S.prefs = (await (await apiFetch('/api/prefs', {cache: 'no-store'})).json()).prefs || {}; } catch { S.prefs = {}; }
   $('#section').textContent = `— ${info.project && info.project !== info.section ? info.project + ' / ' : ''}${info.section} · ${S.editionFile}`;
   document.title = `${info.section} · Saktumiva editor`;
   S.mtime = info.mtimes[S.editionFile];
@@ -893,13 +894,59 @@ function witHTML(node, into) {
     else { const s = h('span', {class: SPANCLASS[n] || ''}); witHTML(c, s); into.append(s); }
   }
 }
+// Witness order: the user's own (dragged) order of sigla, kept in the editor's preferences for all projects;
+// witnesses without the passage always go to the bottom.
+function witnessRank(w) {
+  const order = S.prefs?.witnessOrder || [];
+  const i = order.indexOf(w.siglum);
+  return i < 0 ? order.length + S.witnesses.indexOf(w) : i;
+}
+function orderedWitnesses(id) {
+  return S.witnesses.map(w => ({w, el: witPassage(w.doc, id)}))
+    .sort((a, b) => (!a.el - !b.el) || (witnessRank(a.w) - witnessRank(b.w)));
+}
+async function saveWitnessOrder(sigla) {
+  // keep sigla of other projects that are not in this one, after those reordered here
+  const others = (S.prefs?.witnessOrder || []).filter(s => !sigla.includes(s));
+  S.prefs = {...(S.prefs || {}), witnessOrder: [...sigla, ...others]};
+  try { await apiFetch('/api/prefs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({witnessOrder: S.prefs.witnessOrder})}); }
+  catch { /* the order still applies in this window */ }
+}
+let dragSig = null;
+function witnessDrag(box, siglum) {
+  // only the grip starts a drag, so the witness text can still be selected
+  const grip = box.querySelector('.wgrip');
+  grip.addEventListener('mousedown', () => { box.draggable = true; });
+  grip.addEventListener('mouseup', () => { box.draggable = false; });
+  box.addEventListener('dragstart', e => { dragSig = siglum; box.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', siglum); });
+  box.addEventListener('dragend', () => { dragSig = null; box.draggable = false; box.classList.remove('dragging'); document.querySelectorAll('.wit.drop-before, .wit.drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after')); });
+  box.addEventListener('dragover', e => {
+    if (!dragSig || dragSig === siglum) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    const r = box.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+    box.classList.toggle('drop-after', after); box.classList.toggle('drop-before', !after);
+  });
+  box.addEventListener('dragleave', () => box.classList.remove('drop-before', 'drop-after'));
+  box.addEventListener('drop', e => {
+    e.preventDefault();
+    const after = box.classList.contains('drop-after');
+    box.classList.remove('drop-before', 'drop-after');
+    if (!dragSig || dragSig === siglum) return;
+    // the user's order of all this project's witnesses (also those not in this passage)
+    const all = [...S.witnesses].sort((a, b) => witnessRank(a) - witnessRank(b)).map(w => w.siglum).filter(s => s !== dragSig);
+    all.splice(all.indexOf(siglum) + (after ? 1 : 0), 0, dragSig);
+    saveWitnessOrder(all);
+    renderWitnesses();
+  });
+}
+
 function renderWitnesses() {
   const box = $('#witnesses');
   const id = S.current;
-  box.replaceChildren(...S.witnesses.map(w => {
-    const el = witPassage(w.doc, id);
-    const head = h('div', {class: 'whead'}, h('span', {class: 'wsig'}, w.siglum), h('span', {class: 'wtitle', title: w.title}, w.title));
-    if (!el) return h('div', {class: 'wit', 'data-siglum': w.siglum}, head, h('div', {class: 'muted'}, 'not in this witness'));
+  box.replaceChildren(...orderedWitnesses(id).map(({w, el}) => {
+    const grip = h('span', {class: 'wgrip', title: 'Drag to change the order of the witnesses', 'aria-hidden': 'true'}, '⠿');
+    const head = h('div', {class: 'whead'}, grip, h('span', {class: 'wsig'}, w.siglum), h('span', {class: 'wtitle', title: w.title}, w.title));
+    if (!el) { const b = h('div', {class: 'wit absent', 'data-siglum': w.siglum}, head, h('div', {class: 'muted'}, 'not in this witness')); witnessDrag(b, w.siglum); return b; }
     const {before, inside} = precedingPb(el);
     const pb = before || inside;
     if (pb && w.manifest && pb.getAttribute('facs')) {
@@ -908,6 +955,7 @@ function renderWitnesses() {
     const t = h('div', {class: 'wtext'}); witHTML(el, t);
     const box = h('div', {class: 'wit', 'data-siglum': w.siglum}, head, t);
     head.append(h('button', {title: `Correct ${w.siglum}'s transcription of this passage`, onclick: () => editWitness(w, el, box)}, 'edit'));
+    witnessDrag(box, w.siglum);
     return box;
   }));
   if (S.badFiles.length) box.append(h('p', {class: 'error'}, 'Not loaded: ' + S.badFiles.map(b => b.file).join(', ') + ' (see Settings).'));

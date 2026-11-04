@@ -86,3 +86,8 @@ def test_recent_projects(rasendra, tmp_path):
     assert len(items) == project.RECENT_MAX == 6 and items[0]['sectionName'] == 's7'
     project.forget(items[0]['section'])
     assert [it['sectionName'] for it in project.recent()][:2] == ['s6', 's5']
+
+def test_preferences():
+    assert project.prefs() == {}
+    project.set_prefs({'witnessOrder': ['K', 'N', 'H', 'A'], 'unknown': 1})
+    assert project.prefs() == {'witnessOrder': ['K', 'N', 'H', 'A']}

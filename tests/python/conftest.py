@@ -56,7 +56,8 @@ def sushruta(tmp_path):
 
 class Client:
     def __init__(self, port):
-        self.base = f'http://127.0.0.1:{port}'
+        self.port = port
+        self.base = f"http://127.0.0.1:{port}"
 
     def request(self, method, path, body=None, headers=None):
         data = json.dumps(body).encode() if body is not None else None

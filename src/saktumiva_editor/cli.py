@@ -7,7 +7,7 @@ import webbrowser
 from pathlib import Path
 from urllib.parse import quote
 
-from . import __version__, patches, project, updates
+from . import __version__, instances, patches, project, updates
 from .server import Handler, in_git_repo, make_server
 
 USAGE = """\
@@ -52,7 +52,7 @@ def main(argv=None):
     for p in patches.check_all():
         print(f'Warning: {p}', file=sys.stderr)
 
-    start = '/'
+    start, wanted = '/', None
     if args.folder:
         folder = args.folder.expanduser().resolve()
         if not folder.is_dir():
@@ -67,12 +67,29 @@ def main(argv=None):
             probs = project.config_problems(folder, cfg)
             if probs:
                 sys.exit(f'{folder / project.CONFIG_NAME}: ' + '; '.join(probs))
-            Handler.folder = folder
-            project.remember(project.find_project_root(folder), folder)
-            if not in_git_repo(folder):
-                print('Note: this folder is not in a git repository, so saves are not versioned.')
+            wanted = folder
 
-    srv, port = make_server(args.port)
+    # A copy of the editor may already be running (perhaps forgotten in another terminal window).
+    running = instances.find_running(args.port)
+    reuse = next((r for r in running if wanted and r['folder'] == str(wanted)), None) if wanted else \
+        (running[0] if running and start == '/' else None)
+    if reuse:
+        url = f'http://127.0.0.1:{reuse["port"]}/'
+        what = Path(reuse['folder']).name if reuse['folder'] else 'the project chooser'
+        print(f'The Saktumiva editor is already running ({what}): {url}')
+        if not args.no_browser:
+            webbrowser.open(url)
+        return
+
+    if wanted:
+        Handler.folder = wanted
+        project.remember(project.find_project_root(wanted), wanted)
+        if not in_git_repo(wanted):
+            print('Note: this folder is not in a git repository, so saves are not versioned.')
+    try:
+        srv, port = make_server(args.port)
+    except OSError:
+        sys.exit(no_port_message(args.port, running))
     url = f'http://127.0.0.1:{port}{start}'
     what = Handler.folder.name if Handler.folder else 'choose a project'
     print(f'Saktumiva editor {__version__}: {what}\nOpen {url} in your browser (Ctrl+C here to stop).')
@@ -82,6 +99,20 @@ def main(argv=None):
         srv.serve_forever()
     except KeyboardInterrupt:
         print('\nStopped.')
+
+
+def no_port_message(start: int, running: list) -> str:
+    last = start + 9
+    if not running:
+        return (f'Ports {start}-{last} are all in use by other programs.\n'
+                f'Start the editor on other ports, for example:  saktumiva-editor --port {start + 100}')
+    lines = [f'Ports {start}-{last} are all in use; {len(running)} of them by copies of the Saktumiva editor that are still running:']
+    for r in running:
+        lines.append(f'  http://127.0.0.1:{r["port"]}/   {r["folder"] or "(project chooser)"}   version {r["version"]}')
+    lines += ['Open one of these in your browser, or stop the ones you do not need: press Ctrl+C in their',
+              'terminal windows, or on Linux and macOS run:  pkill -f saktumiva-editor',
+              f'You can also start this one on other ports:  saktumiva-editor --port {start + 100}']
+    return '\n'.join(lines)
 
 
 if __name__ == '__main__':

@@ -203,7 +203,7 @@ class Handler(SimpleHTTPRequestHandler):
             if self._stale():
                 return self._refuse_stale()
         if u.path == '/api/state':
-            return self._json({'version': __version__, 'folder': str(self.folder) if self.folder else None,
+            return self._json({'app': 'saktumiva-editor', 'version': __version__, 'folder': str(self.folder) if self.folder else None,
                                'section': self.folder.name if self.folder else None,
                                'install': updates.install_kind(), 'patchProblems': patches.check_all()})
         if u.path == '/api/recent':

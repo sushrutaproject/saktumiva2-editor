@@ -127,3 +127,24 @@ def test_cache_goes_to_the_editor_home(server, rasendra, editor_home):
     assert st == 200 and body == b'<x/>'
     assert list((editor_home / 'cache').rglob('ch1.1.json'))
     assert not any(p.name == 'ch1.1.json' for p in rasendra.rglob('*'))
+
+
+def test_running_copies_are_found(server):
+    from saktumiva_editor import instances
+    found = instances.find_running(server.port, tries=1)
+    assert found and found[0]['port'] == server.port and found[0]['folder'] is None
+
+
+def test_cli_reuses_a_running_copy(server, monkeypatch, capsys):
+    from saktumiva_editor import cli
+    opened = []
+    monkeypatch.setattr(cli.webbrowser, 'open', opened.append)
+    cli.main(['--port', str(server.port)])          # returns at once instead of starting a second server
+    assert opened == [f'http://127.0.0.1:{server.port}/'] and 'already running' in capsys.readouterr().out
+
+
+def test_no_free_port_message():
+    from saktumiva_editor.cli import no_port_message
+    assert 'other programs' in no_port_message(8800, [])
+    msg = no_port_message(8800, [{'port': 8801, 'folder': '/x/03-su.sa', 'version': '0.3.0'}])
+    assert '8801' in msg and '03-su.sa' in msg and 'pkill' in msg

@@ -32,6 +32,14 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .status.saved { color: var(--ok); }
 
 #layout { display: grid; grid-template-columns: 250px minmax(0, 1fr) minmax(320px, 34%); height: calc(100% - 48px); }
+#layout.no-left { grid-template-columns: 0 minmax(0, 1fr) minmax(320px, 34%); }
+#layout.no-right { grid-template-columns: 250px minmax(0, 1fr) 0; }
+#layout.no-left.no-right { grid-template-columns: 0 minmax(0, 1fr) 0; }
+#passages { grid-column: 1; } #centre { grid-column: 2; } #right { grid-column: 3; }
+#layout.no-left #passages, #layout.no-right #right { display: none; }
+.paneltoggle[aria-pressed="false"] { opacity: .6; }
+#passage-head .textsize { display: flex; gap: 2px; }
+#passage-head .textsize button { padding: 2px 8px; min-width: 2.2em; }
 #passages { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
 #filter { margin: 10px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font: inherit; }
 #passage-list { overflow-y: auto; flex: 1; padding-bottom: 20px; }
@@ -51,7 +59,7 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 #passage-head h1 { font-size: 18px; font-variant-numeric: tabular-nums; }
 #passage-head .tools { display: flex; gap: 6px; }
 
-.passage { font-family: var(--serif); font-size: 21px; line-height: 1.75; background: var(--panel);
+.passage { font-family: var(--serif); font-size: var(--text-size, 21px); line-height: 1.75; background: var(--panel);
   border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; min-height: 70px; }
 .passage .l, .passage .p { margin: 2px 0; }
 .passage .trailer, .passage .label, .passage .head { font: 12px var(--sans); color: var(--muted); margin-top: 4px; }

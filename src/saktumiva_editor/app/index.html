@@ -8,6 +8,7 @@
 </head>
 <body>
 <header id="topbar">
+  <button id="btn-toggle-left" class="paneltoggle" title="Hide the passage list ([)" aria-pressed="true">☰</button>
   <div class="brand"><strong>Saktumiva editor</strong> <span id="section" class="muted"></span></div>
   <div class="spacer"></div>
   <span id="status" class="status">Loading…</span>
@@ -18,6 +19,7 @@
   <button id="btn-history" title="Saved versions (git)">History</button>
   <button id="btn-info" title="Files and collation settings">Settings</button>
   <button id="btn-projects" title="Open another project or section">Projects</button>
+  <button id="btn-toggle-right" class="paneltoggle" title="Hide the witnesses (])" aria-pressed="true">Witnesses</button>
   <div class="menu" id="help-menu">
     <button id="btn-help-menu" aria-haspopup="true" aria-expanded="false" title="Help">Help ▾</button>
     <div class="menu-items" role="menu" hidden>
@@ -41,6 +43,11 @@
         <h1 id="passage-id"></h1>
         <button id="btn-next" title="Next passage (Alt+↓)">▶</button>
         <span id="passage-chapter" class="muted"></span>
+      </div>
+      <div class="textsize" role="group" aria-label="Text size">
+        <button id="btn-text-smaller" title="Smaller text (Ctrl+−)">A−</button>
+        <button id="btn-text-reset" title="Normal text size">A</button>
+        <button id="btn-text-larger" title="Larger text (Ctrl++)">A+</button>
       </div>
       <div class="tools" id="reading-tools">
         <button id="btn-edit" title="Edit the text of this passage (E)">Edit text</button>

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* Starting the editor reuses a copy that is already running only if it is the same version. After an
+  update, an old copy still running is no longer opened in place of the new one; you are told it is
+  still running instead.
+
 ## 0.4.1
 
 * If the editor is already running (perhaps forgotten in another terminal window), starting it again opens

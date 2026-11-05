@@ -111,7 +111,7 @@ online until you push. Work cycle: edit → Publish → check the published file
   neighbouring column. The apparatus follows as you work. Saving writes `alignments/<passage>.xml`
   (marked in its header as corrected by hand) with a git commit, and the editor uses that file from
   then on. No witness's text can be changed here, and every column keeps some text of the edition.
-* **Layout**: the ☰ button (or the [ key) hides and shows the passage list, **Witnesses** (or ]) the
+* **Layout**: the ☰ button (or the [ key) hides and shows the passage list, **Witnesses ▸** at the far right (or ]) the
   witnesses; **A− A A+** above the text (or Ctrl+−, Ctrl+0, Ctrl++) change its size. These choices are remembered.
 * **Witnesses** (right): each witness's text of the passage, with a button that opens the page image,
   and **edit**, which corrects the witness's own transcription of the passage (as TEI). That is saved

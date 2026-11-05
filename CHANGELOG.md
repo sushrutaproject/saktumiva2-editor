@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+* Top bar: the buttons always stay visible in narrow windows (the project name and status are shortened
+  with "…" instead). The witnesses button is now at the far right ("Witnesses ▸", or "◂ Witnesses" when hidden).
+
 ## 0.4.0
 
 * Hide or show the passage list (☰ button, or the [ key) and the witnesses (Witnesses button, or ]).

@@ -77,6 +77,7 @@ async function load() {
   S.folder = info.folder; S.version = info.version;
   S.cfg = info.config; S.gitOn = info.git; S.editionFile = S.cfg.edition; S.publishTo = info.publishTo;
   try { S.prefs = (await (await apiFetch('/api/prefs', {cache: 'no-store'})).json()).prefs || {}; } catch { S.prefs = {}; }
+  applyLayoutPrefs();
   $('#section').textContent = `— ${info.project && info.project !== info.section ? info.project + ' / ' : ''}${info.section} · ${S.editionFile}`;
   document.title = `${info.section} · Saktumiva editor`;
   S.mtime = info.mtimes[S.editionFile];
@@ -894,6 +895,48 @@ function witHTML(node, into) {
     else { const s = h('span', {class: SPANCLASS[n] || ''}); witHTML(c, s); into.append(s); }
   }
 }
+// ---------------------------------------------------------------- layout: side panels and text size
+const TEXT_SIZE = {min: 14, max: 40, step: 2, normal: 21};
+function savePrefs(changes) {
+  S.prefs = {...(S.prefs || {}), ...changes};
+  apiFetch('/api/prefs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(changes)}).catch(() => {});
+}
+function applyLayoutPrefs() {
+  const p = S.prefs || {};
+  const L = $('#layout');
+  L.classList.toggle('no-left', !!p.hideLeft);
+  L.classList.toggle('no-right', !!p.hideRight);
+  const tl = $('#btn-toggle-left'), tr = $('#btn-toggle-right');
+  tl.setAttribute('aria-pressed', String(!p.hideLeft)); tl.title = (p.hideLeft ? 'Show' : 'Hide') + ' the passage list ([)';
+  tr.setAttribute('aria-pressed', String(!p.hideRight)); tr.title = (p.hideRight ? 'Show' : 'Hide') + ' the witnesses (])';
+  const size = Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, Number(p.textSize) || TEXT_SIZE.normal));
+  document.documentElement.style.setProperty('--text-size', size + 'px');
+  $('#btn-text-reset').title = `Normal text size (now ${size}px)`;
+}
+function setTextSize(delta) {
+  const now = Number(S.prefs?.textSize) || TEXT_SIZE.normal;
+  const size = delta === 0 ? TEXT_SIZE.normal : Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, now + delta));
+  savePrefs({textSize: size}); applyLayoutPrefs();
+}
+const togglePanel = side => { savePrefs({[side]: !S.prefs?.[side]}); applyLayoutPrefs(); };
+$('#btn-toggle-left').addEventListener('click', () => togglePanel('hideLeft'));
+$('#btn-toggle-right').addEventListener('click', () => togglePanel('hideRight'));
+$('#btn-text-smaller').addEventListener('click', () => setTextSize(-TEXT_SIZE.step));
+$('#btn-text-larger').addEventListener('click', () => setTextSize(TEXT_SIZE.step));
+$('#btn-text-reset').addEventListener('click', () => setTextSize(0));
+document.addEventListener('keydown', e => {
+  const typing = e.target.closest?.('input, textarea, select, [contenteditable="true"], dialog');
+  if (!typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.key === '[') { e.preventDefault(); togglePanel('hideLeft'); }
+    else if (e.key === ']') { e.preventDefault(); togglePanel('hideRight'); }
+  }
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !typing) {
+    if (e.key === '=' || e.key === '+') { e.preventDefault(); setTextSize(TEXT_SIZE.step); }
+    else if (e.key === '-') { e.preventDefault(); setTextSize(-TEXT_SIZE.step); }
+    else if (e.key === '0') { e.preventDefault(); setTextSize(0); }
+  }
+});
+
 // Witness order: the user's own (dragged) order of sigla, kept in the editor's preferences for all projects;
 // witnesses without the passage always go to the bottom.
 function witnessRank(w) {
@@ -978,6 +1021,7 @@ const processManifest = data => {
 async function showImage(w, pb) {
   const page = (parseInt(pb.getAttribute('facs')) || 1) - 1;
   $('#image-panel').hidden = false;
+  if (S.prefs?.hideRight) { savePrefs({hideRight: false}); applyLayoutPrefs(); }   // the image lives in the right-hand panel
   $('#image-title').textContent = `${w.siglum} · ${pb.getAttribute('n') || ''}`;
   try {
     if (!OSD) OSD = (await import('./saktumiva/editmode/openseadragon/openseadragon.min.mjs')).default;

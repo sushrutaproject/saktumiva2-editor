@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* Hide or show the passage list (☰ button, or the [ key) and the witnesses (Witnesses button, or ]).
+* Text size of the passage: A− / A / A+ above the text (or Ctrl+− / Ctrl+0 / Ctrl++).
+* Both are remembered, like the witness order.
+
 ## 0.3.0
 
 * Witnesses panel: drag a witness by its handle (⠿) to change the order. The order is remembered for all

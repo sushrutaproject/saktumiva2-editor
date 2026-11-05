@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1
 
 * If the editor is already running (perhaps forgotten in another terminal window), starting it again opens
   that copy in the browser instead of starting a second one. If all ports are taken, it says by what

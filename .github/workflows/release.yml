@@ -93,18 +93,19 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
+      # not "assets/": the repository has its own assets/ folder (the website's CSS)
       - uses: actions/download-artifact@v8
         with:
-          path: assets
+          path: release-files
           merge-multiple: true
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ls -la assets
+          ls -la release-files
           notes=$(awk -v v="${TAG#v}" '$0 ~ "^## "v {f=1; next} /^## / {f=0} f' CHANGELOG.md)
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" assets/* --clobber
+            gh release upload "$TAG" release-files/* --clobber
           else
-            gh release create "$TAG" assets/* --title "Saktumiva editor ${TAG#v}" --notes "${notes:-See CHANGELOG.md}"
+            gh release create "$TAG" release-files/* --title "Saktumiva editor ${TAG#v}" --notes "${notes:-See CHANGELOG.md}"
           fi

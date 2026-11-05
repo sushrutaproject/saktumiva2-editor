@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 * Hide or show the passage list (☰ button, or the [ key) and the witnesses (Witnesses button, or ]).
 * Text size of the passage: A− / A / A+ above the text (or Ctrl+− / Ctrl+0 / Ctrl++).

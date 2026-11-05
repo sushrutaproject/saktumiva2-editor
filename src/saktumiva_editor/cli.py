@@ -70,7 +70,11 @@ def main(argv=None):
             wanted = folder
 
     # A copy of the editor may already be running (perhaps forgotten in another terminal window).
-    running = instances.find_running(args.port)
+    found = instances.find_running(args.port)
+    # only a copy of this same version is reused: after an update, an old copy still running must not be
+    # opened in place of the new one
+    running = [r for r in found if r['version'] == __version__]
+    older = [r for r in found if r['version'] != __version__]
     reuse = next((r for r in running if wanted and r['folder'] == str(wanted)), None) if wanted else \
         (running[0] if running and start == '/' else None)
     if reuse:
@@ -89,7 +93,10 @@ def main(argv=None):
     try:
         srv, port = make_server(args.port)
     except OSError:
-        sys.exit(no_port_message(args.port, running))
+        sys.exit(no_port_message(args.port, found))
+    for r in older:
+        print(f'Note: an older copy of the editor (version {r["version"]}) is still running at '
+              f'http://127.0.0.1:{r["port"]}/ . Stop it (Ctrl+C in its window) when you have saved your work there.')
     url = f'http://127.0.0.1:{port}{start}'
     what = Handler.folder.name if Handler.folder else 'choose a project'
     print(f'Saktumiva editor {__version__}: {what}\nOpen {url} in your browser (Ctrl+C here to stop).')

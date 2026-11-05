@@ -148,3 +148,18 @@ def test_no_free_port_message():
     assert 'other programs' in no_port_message(8800, [])
     msg = no_port_message(8800, [{'port': 8801, 'folder': '/x/03-su.sa', 'version': '0.3.0'}])
     assert '8801' in msg and '03-su.sa' in msg and 'pkill' in msg
+
+
+def test_cli_does_not_reuse_an_older_copy(server, monkeypatch, capsys):
+    from saktumiva_editor import cli, instances
+    monkeypatch.setattr(instances, 'find_running', lambda start, tries=10: [{'port': server.port, 'version': '0.1.0', 'folder': None}])
+    started = []
+    class FakeSrv:
+        def serve_forever(self): started.append(True)
+        def server_close(self): pass
+    monkeypatch.setattr(cli, 'make_server', lambda port: (FakeSrv(), server.port + 1))
+    monkeypatch.setattr(cli.webbrowser, 'open', lambda url: None)
+    monkeypatch.setattr(cli.threading, 'Timer', lambda *a, **k: type('T', (), {'start': lambda self: None})())
+    cli.main(['--port', str(server.port), '--no-browser'])
+    out = capsys.readouterr().out
+    assert started and 'older copy' in out and '0.1.0' in out

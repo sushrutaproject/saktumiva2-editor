@@ -112,6 +112,11 @@ def test_serves_patched_saktumiva_and_nothing_else_of_it(server):
     assert st == 403
 
 
+def test_serves_the_stemma_view(server):
+    st, page = server.get('/stemma.mjs')
+    assert st == 200 and b'export function findStemmata' in page
+
+
 def test_refuses_other_host_names(server):
     st, _ = server.get('/api/state', headers={'Host': 'attacker.example'})
     assert st == 403

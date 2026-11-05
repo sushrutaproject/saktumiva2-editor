@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+* **Stemma** (top bar): if the edition's teiHeader has a `<stemma format="nexml">` (in `<xenoData>`, as SplitsTree6 and
+  Saktumiva write it), the button draws it as a stemma codicum: the root at the top, the witnesses' sigla at the
+  leaves, the inner nodes unnamed. Branch lengths are shown in proportion (with a scale), or ignored (one step per
+  generation); lines straight or right-angled. Point at a branch for its length, at a siglum for its witness.
+  Several stemmata, or several trees in one, are offered in a list. A witness at the root with a single branch
+  (SplitsTree roots its trees at the first taxon) is drawn as a leaf, unless "Root as in the file" is ticked.
+  *Download SVG* saves the drawing. The button is shown only when there is a stemma; one inside a comment is
+  reported, not drawn.
+
 ## 0.4.2
 
 * The witnesses toggle at the far right of the top bar is now a ☰ button, like the one for the passage list

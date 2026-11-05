@@ -17,6 +17,7 @@
   <button id="btn-save" class="primary" title="Save to the TEI file (Ctrl+S)" disabled>Save</button>
   <button id="btn-publish" title="Write the edition with the full apparatus to a separate file">Publish</button>
   <button id="btn-history" title="Saved versions (git)">History</button>
+  <button id="btn-stemma" title="The stemma in the edition’s teiHeader" hidden>Stemma</button>
   <button id="btn-info" title="Files and collation settings">Settings</button>
   <button id="btn-projects" title="Open another project or section">Projects</button>
   <div class="menu" id="help-menu">
@@ -144,6 +145,21 @@
     <button id="btn-pub-start" class="primary">Publish</button>
     <button id="btn-pub-close" class="primary" hidden>Close</button>
   </div>
+</dialog>
+
+<dialog id="stemma-dialog" class="wide">
+  <h3 id="stemma-title">Stemma</h3>
+  <div class="stemma-bar">
+    <select id="stemma-which" aria-label="Which stemma" hidden></select>
+    <label class="chk" title="Vertical distance shows the length of each branch; otherwise one step per generation"><input type="checkbox" id="stemma-lengths"> Branch lengths in proportion</label>
+    <label class="chk">Lines <select id="stemma-lines"><option value="straight">straight</option><option value="square">right-angled</option></select></label>
+    <label class="chk" id="stemma-asfile-box" hidden><input type="checkbox" id="stemma-asfile"> Root as in the file</label>
+    <span class="spacer"></span>
+    <button id="btn-stemma-svg" title="Save the drawing as an SVG file (for a paper or the website)">Download SVG</button>
+  </div>
+  <div id="stemma-figure"></div>
+  <div id="stemma-notes" class="muted"></div>
+  <div class="dialog-buttons"><span class="spacer"></span><button id="btn-stemma-close" class="primary">Close</button></div>
 </dialog>
 
 <dialog id="info-dialog"><form method="dialog"><div id="info-body"></div><div class="dialog-buttons outer"><span class="spacer"></span><button class="primary">Close</button></div></form></dialog>

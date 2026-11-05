@@ -1,10 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.4.2
 
 * The witnesses toggle at the far right of the top bar is now a ☰ button, like the one for the passage list
   at the far left.
-
 * Starting the editor reuses a copy that is already running only if it is the same version. After an
   update, an old copy still running is no longer opened in place of the new one; you are told it is
   still running instead.

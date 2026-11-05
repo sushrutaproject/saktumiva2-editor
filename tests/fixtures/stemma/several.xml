@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+    <teiHeader>
+        <fileDesc>
+            <titleStmt><title>Several stemmata: Saktumiva’s own, several trees in one NeXML, and some that cannot be drawn</title></titleStmt>
+            <publicationStmt><p>Test fixture for the Stemma view.</p></publicationStmt>
+            <sourceDesc><p>See README.md.</p></sourceDesc>
+        </fileDesc>
+        <xenoData>
+            <stemma format="nexml" id="stemma0"><nex:nexml xmlns:nex="http://www.nexml.org/2009" version="0.9"><nex:otus id="otus1"><nex:otu id="otu0" label="A1938"/><nex:otu id="otu1" label="N"/><nex:otu id="otu2" label="H"/><nex:otu id="otu3" label="NE"/></nex:otus><nex:trees otus="otus1" id="trees1"><nex:tree id="guidetree" label="guidetree" xsi:type="nex:FloatTree" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><nex:node id="4baee3b4-88b6-4133-88aa-bbc697942945" root="true"/><nex:node id="91bfd4b3-e69f-4efc-be18-cdd985ec00e7"/><nex:node id="ec1f7736-8e27-4a0b-9d78-4690e5f09746" label="A1938" otu="otu2"/><nex:node id="f2bed640-8a9c-4c49-bb69-e8894eac71a7" label="N" otu="otu3"/><nex:node id="4b7f03c9-5cab-4733-a3b4-8bfd115a5d7e"/><nex:node id="3be9aa3b-5d88-4845-a433-781ee2c3800a" label="H" otu="otu5"/><nex:node id="aacb12bc-15ee-495e-b1b0-67de013ed362" label="NE" otu="otu6"/><nex:edge source="4baee3b4-88b6-4133-88aa-bbc697942945" target="91bfd4b3-e69f-4efc-be18-cdd985ec00e7" id="edge0" length="0.22724410704895176"/><nex:edge source="4baee3b4-88b6-4133-88aa-bbc697942945" target="4b7f03c9-5cab-4733-a3b4-8bfd115a5d7e" id="edge1" length="0.22724410704895176"/><nex:edge source="91bfd4b3-e69f-4efc-be18-cdd985ec00e7" target="ec1f7736-8e27-4a0b-9d78-4690e5f09746" id="edge2" length="0.49004098986767197"/><nex:edge source="91bfd4b3-e69f-4efc-be18-cdd985ec00e7" target="f2bed640-8a9c-4c49-bb69-e8894eac71a7" id="edge3" length="0.49004098986767153"/><nex:edge source="4b7f03c9-5cab-4733-a3b4-8bfd115a5d7e" target="3be9aa3b-5d88-4845-a433-781ee2c3800a" id="edge4" length="0"/><nex:edge source="4b7f03c9-5cab-4733-a3b4-8bfd115a5d7e" target="aacb12bc-15ee-495e-b1b0-67de013ed362" id="edge5" length="0"/></nex:tree></nex:trees></nex:nexml></stemma>
+            <stemma format="nexml" id="stemma1"><nex:nexml xmlns:nex="http://www.nexml.org/2009" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="0.9">
+                <nex:otus id="o"><nex:otu id="oA" label="A"/><nex:otu id="oB" label="B&lt;1&gt;"/><nex:otu id="oC" label="C"/></nex:otus>
+                <nex:trees otus="o" id="t">
+                    <nex:tree id="cladogram" label="without lengths" xsi:type="nex:IntTree">
+                        <nex:node id="r" root="true"/><nex:node id="x"/><nex:node id="a" otu="oA"/><nex:node id="b" otu="oB"/><nex:node id="c" label="C" otu="oC"/>
+                        <nex:edge id="e1" source="r" target="x"/><nex:edge id="e2" source="x" target="a"/><nex:edge id="e3" source="x" target="b"/><nex:edge id="e4" source="r" target="c"/>
+                    </nex:tree>
+                    <nex:tree id="exemplar" label="A copied from C" xsi:type="nex:FloatTree">
+                        <nex:node id="r2" root="true"/><nex:node id="c2" label="C"/><nex:node id="a2" label="A"/><nex:node id="b2" label="B"/>
+                        <nex:edge id="f1" source="r2" target="c2" length="0.2"/><nex:edge id="f2" source="c2" target="a2" length="0.1"/><nex:edge id="f3" source="r2" target="b2" length="-0.05"/>
+                    </nex:tree>
+                    <nex:network id="net" xsi:type="nex:FloatNetwork">
+                        <nex:node id="p"/><nex:node id="q"/><nex:edge id="g1" source="p" target="q" length="1"/>
+                    </nex:network>
+                </nex:trees>
+            </nex:nexml></stemma>
+            <stemma format="newick" id="stemma2">((A,B),C);</stemma>
+        </xenoData>
+    </teiHeader>
+    <text><body><p xml:id="t1">atha</p></body></text>
+</TEI>

@@ -4,6 +4,7 @@ import { Collator, readSettings, settingsFromConfig, settingsToConfig, filterCat
 import { AlignMatrix } from './aligner.mjs';
 import saktumivaIgnoreTags from './saktumiva/lib/tagfilters.mjs';
 import { setupMenu, checkForUpdates, showAbout } from './common.mjs';
+import { findStemmata, layoutTree, renderSVG, sigla as stemmaSigla } from './stemma.mjs';
 
 // ================================================================ helpers
 const $ = (s, r = document) => r.querySelector(s);
@@ -96,6 +97,9 @@ async function load() {
   let settings = readSettings(settingsDoc);
   if (S.cfg.collation) { settings = settingsFromConfig(S.cfg.collation, settings); S.settingsSource = 'editor.config.json (set in Settings)'; }
   const edSiglum = S.origDoc.querySelector('idno[type="siglum"]')?.textContent.trim() || 'Ed';
+  S.edSiglum = edSiglum;
+  S.stemmata = findStemmata(S.origDoc);
+  $('#btn-stemma').hidden = !S.stemmata.stemmata.length && !S.stemmata.commented;
   S.collator = new Collator({settings, extraIgnore: S.cfg.collation?.ignoreTags ? [] : (S.cfg.extraIgnoreTags || []),
                              apparatusOpts: S.cfg.apparatus || {}, scriptNoteRules: S.cfg.scriptNoteRules || {},
                              editionFile: S.editionFile, editionSiglum: edSiglum});
@@ -1737,6 +1741,90 @@ $('#btn-history').addEventListener('click', async () => {
     : h('p', {}, S.gitOn ? 'No commits yet.' : 'This folder is not a git repository.'),
     h('p', {class: 'muted'}, 'To go back to a version, use git (e.g. git checkout <id> -- <file>) or ask Claude.'));
 });
+// ---------------------------------------------------------------- stemma (teiHeader > xenoData > stemma[format=nexml])
+// What a siglum stands for: the section's witnesses, the edition itself, and the <listWit> of the edition's header.
+function siglumNames() {
+  const m = new Map(S.witnesses.map(w => [w.siglum, w.title]));
+  if (S.edSiglum && !m.has(S.edSiglum)) m.set(S.edSiglum, `the edition (${S.editionFile})`);
+  for (const wit of teiEls(S.origDoc, 'witness')) {
+    const sig = wit.querySelector('abbr[type="siglum"]')?.textContent.trim() || xmlid(wit);
+    if (sig && !m.has(sig)) m.set(sig, wit.textContent.replace(/\s+/g, ' ').trim());
+  }
+  return m;
+}
+const stemmaOpts = () => ({proportional: S.prefs?.stemma?.proportional ?? true, lines: S.prefs?.stemma?.lines || 'straight'});
+let stemmaSVG = null;
+function drawStemma() {
+  const all = S.stemmata.stemmata, sel = $('#stemma-which');
+  const st = all.find(x => x.key === sel.value) || all[0];
+  const fig = $('#stemma-figure'), notes = [];
+  const lengthsBox = $('#stemma-lengths');
+  stemmaSVG = null;
+  $('#btn-stemma-svg').disabled = true;
+  $('#stemma-asfile-box').hidden = true;
+  lengthsBox.disabled = false;
+  if (S.stemmata.commented) notes.push(`${S.stemmata.commented === 1 ? 'A <stemma>' : S.stemmata.commented + ' <stemma> elements'} in the teiHeader ${S.stemmata.commented === 1 ? 'is' : 'are'} inside a comment (<!-- … -->) and so not read. Remove the comment marks around it to show it here.`);
+  if (!st) {
+    fig.replaceChildren(h('p', {}, 'The edition’s teiHeader has no stemma that can be read.'));
+  } else if (st.error) {
+    fig.replaceChildren(h('p', {class: 'error'}, `${st.title}: ${st.error}.`));
+  } else {
+    const t = st.tree, o = stemmaOpts();
+    const asFile = $('#stemma-asfile').checked;
+    if (t.leafRoot) {
+      $('#stemma-asfile-box').hidden = false;
+      if (!asFile) notes.push(`In the file the tree is rooted at ${t.root.label}, which has a single branch (SplitsTree roots its trees at the first witness); it is drawn here as a leaf. Tick “Root as in the file” to draw it as the root.`);
+    }
+    const root = t.leafRoot && !asFile ? t.leafRoot : t.root;
+    lengthsBox.disabled = t.lengths === 'none';
+    const lay = layoutTree(root, {proportional: o.proportional && t.lengths !== 'none'});
+    if (t.lengths === 'none') notes.push('The tree has no branch lengths: one step per generation.');
+    else if (lay.proportional) notes.push('The vertical distance shows the length of each branch (scale at the left). Point at a branch for its length.');
+    if (t.lengths === 'some') notes.push('Some branches have no length; they are drawn with length 0.');
+    if (t.negative) notes.push(`${t.negative} branch${t.negative > 1 ? 'es have' : ' has'} a negative length, drawn as 0.`);
+    const names = siglumNames();
+    const describe = sig => names.get(sig) || '';
+    const inTree = stemmaSigla(root);
+    const unknown = inTree.filter(x => !names.has(x));
+    const missing = S.witnesses.map(w => w.siglum).filter(x => !inTree.includes(x));
+    if (unknown.length) notes.push(`Not a witness of this section: ${unknown.join(', ')}.`);
+    if (missing.length) notes.push(`Witnesses of this section not in the stemma: ${missing.join(', ')}.`);
+    fig.innerHTML = renderSVG(lay, {lines: o.lines, describe});
+    stemmaSVG = {svg: renderSVG(lay, {lines: o.lines, describe, standalone: true}), title: st.title};
+    $('#btn-stemma-svg').disabled = false;
+  }
+  $('#stemma-notes').replaceChildren(...notes.map(n => h('p', {}, n)));
+}
+function openStemma() {
+  const all = S.stemmata.stemmata, sel = $('#stemma-which');
+  sel.replaceChildren(...all.map(x => h('option', {value: x.key}, x.title)));
+  sel.hidden = all.length < 2;
+  // nothing to draw (only a commented-out stemma, or ones that cannot be read): no drawing options
+  const drawable = all.some(x => x.tree);
+  for (const el of $('#stemma-dialog .stemma-bar').children) if (el !== sel && el.id !== 'stemma-asfile-box') el.hidden = !drawable;
+  $('#stemma-title').textContent = all.length > 1 ? `Stemmata (${all.length})`
+    : all.length && !/^Stemma \d+$/.test(all[0].title) ? `Stemma: ${all[0].title}` : 'Stemma';   // no name of its own
+  const o = stemmaOpts();
+  $('#stemma-lengths').checked = o.proportional;
+  $('#stemma-lines').value = o.lines;
+  drawStemma();
+  $('#stemma-dialog').showModal();
+}
+const setStemmaOpt = changes => { savePrefs({stemma: {...stemmaOpts(), ...changes}}); drawStemma(); };
+$('#btn-stemma').addEventListener('click', openStemma);
+$('#btn-stemma-close').addEventListener('click', () => $('#stemma-dialog').close());
+$('#stemma-which').addEventListener('change', () => { $('#stemma-asfile').checked = false; drawStemma(); });
+$('#stemma-lengths').addEventListener('change', e => setStemmaOpt({proportional: e.target.checked}));
+$('#stemma-lines').addEventListener('change', e => setStemmaOpt({lines: e.target.value}));
+$('#stemma-asfile').addEventListener('change', drawStemma);
+$('#btn-stemma-svg').addEventListener('click', () => {
+  if (!stemmaSVG) return;
+  const name = `${S.editionFile.replace(/\.[^.]+$/, '')}_${stemmaSVG.title.replace(/[^\p{L}\p{N}]+/gu, '-')}.svg`;
+  const a = h('a', {href: URL.createObjectURL(new Blob([stemmaSVG.svg], {type: 'image/svg+xml'})), download: name});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
 $('#btn-help').addEventListener('click', () => showInfo('Using the editor',
   h('p', {}, 'The text you see is the edition file itself. Changes stay in this window until you press Save; then they are written to the TEI file (only the passages and notes you changed) and committed to git.'),
   h('h3', {}, 'Choosing readings'), h('p', {}, 'Click a word in the text, or point at an apparatus entry, to see its lemma. Press “use” beside a reading to put it in the text. The passage is collated again at once, so the old lemma becomes a variant.'),
@@ -1745,6 +1833,7 @@ $('#btn-help').addEventListener('click', () => showInfo('Using the editor',
   h('h3', {}, 'Trivial variants'), h('p', {}, 'Settings lists Saktumiva’s normalizations (final nasals, visarga sandhi, b/v …): readings that differ only in these ways are kept as “minor” readings, not variants. Each witness’s <scriptNote>s (e.g. script-ba-va) are obeyed for that witness alone.'),
   h('h3', {}, 'Publishing'), h('p', {}, '“Publish” writes a separate file (named in Settings) containing your edition and notes followed by Saktumiva’s apparatus for every passage (<standOff type="apparatus">), using your corrected alignments where you made them. The alignment files are brought up to date in the same step, and the whole is one git commit. Your edition file itself is not changed.'),
   h('h3', {}, 'Notes'), h('p', {}, 'Select a word and press “Add note here”. The anchor and the <standOff> note are created with matching ids. Edit or delete notes in the Notes panel.'),
+  h('h3', {}, 'Stemma'), h('p', {}, 'If the edition’s teiHeader has a <stemma format="nexml"> (in <xenoData>, as SplitsTree6 or Saktumiva write it), the Stemma button draws it: the sigla at the leaves, branch lengths in proportion or one step per generation. Download SVG saves the drawing.'),
   h('h3', {}, 'Keys'), h('p', {}, h('kbd', {}, 'Alt ↑/↓'), ' previous/next passage · ', h('kbd', {}, 'E'), ' edit text · ', h('kbd', {}, 'A'), ' correct alignment · ', h('kbd', {}, 'N'), ' add note · ', h('kbd', {}, 'Ctrl Z'), ' undo · ', h('kbd', {}, 'Ctrl S'), ' save · ', h('kbd', {}, 'Esc'), ' cancel editing'),
   h('p', {class: 'muted'}, 'Undo works until you save. After that, every saved version is in git (History).')));
 

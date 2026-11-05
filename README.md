@@ -118,6 +118,11 @@ online until you push. Work cycle: edit → Publish → check the published file
   at once to the witness file, with a git commit, and the passage is collated again.
   Drag a witness by its handle (⠿) to reorder the list; the order is remembered. Witnesses that lack the
   passage are listed last.
+* **Stemma** (top bar, shown only if the edition has one): draws the `<stemma format="nexml">` of the edition's
+  teiHeader (in `<xenoData>`, as SplitsTree6 or Saktumiva write it) as a stemma codicum, sigla at the leaves.
+  Branch lengths in proportion (with a scale bar) or one step per generation; straight or right-angled lines;
+  a list when there are several stemmata or trees; **Download SVG** saves the drawing. Pointing at a branch gives
+  its length, at a siglum the witness. A stemma inside an XML comment is not read (the dialog says so).
 * **Publish** (top bar): writes the edition with the full apparatus to a separate file, by default
   `<edition>_with-apparatus.xml` in the section folder (set `"publishTo"` in `editor.config.json` to change
   it). It is your edition file exactly as written, plus the stylesheet header, the witnesses in `<listWit>`
@@ -178,6 +183,7 @@ saktumiva-editor
 * `src/saktumiva_editor/server.py`: the local server (Python standard library only); `cli.py`, `project.py`
   (sections, configuration, recent projects), `updates.py` (GitHub Releases).
 * `src/saktumiva_editor/app/`: the editing screen (`index.html`, `main.mjs` …) and the project chooser (`chooser.*`).
+  `stemma.mjs` reads and draws the stemmata; it needs no other file and returns plain SVG, so it can be used on a web page as well.
 * `src/saktumiva_editor/app/saktumiva/`: **Saktumiva, as a git submodule** pinned to one commit of
   [chchch/saktumiva](https://github.com/chchch/saktumiva). Only its `lib/` and the OpenSeadragon image viewer are
   served and packaged.
@@ -195,7 +201,8 @@ cd tests/js && npm ci && node --test # the collation regression tests
 
 The regression tests run the editor's collation and apparatus code, with the pinned Saktumiva, on real sections
 (`tests/fixtures`: the Suśrutasaṃhitā Śārīrasthāna and Rasendramaṅgala chapter 1) and compare the alignments,
-apparatus and published `<standOff>` with the stored results in `tests/golden`. They also check that the patch
+apparatus and published `<standOff>` with the stored results in `tests/golden`. `stemma.test.mjs` tests the Stemma view
+on the NeXML of SplitsTree6, Saktumiva and Bio::Phylo (`tests/fixtures/stemma` and the Rasendramaṅgala fixture). They also check that the patch
 still fits and still matters (switching script notes off must change the apparatus of certain passages).
 
 ### Updating Saktumiva

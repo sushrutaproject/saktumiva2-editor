@@ -91,3 +91,5 @@ def test_preferences():
     assert project.prefs() == {}
     project.set_prefs({'witnessOrder': ['K', 'N', 'H', 'A'], 'unknown': 1})
     assert project.prefs() == {'witnessOrder': ['K', 'N', 'H', 'A']}
+    project.set_prefs({'stemma': {'proportional': False, 'lines': 'square'}})
+    assert project.prefs()['stemma'] == {'proportional': False, 'lines': 'square'}

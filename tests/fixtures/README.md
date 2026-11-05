@@ -15,3 +15,5 @@ Sources:
 * `sushruta-sarira`: [sushrutaproject1/Sushrutasamhita_Saktumiva2](https://github.com/sushrutaproject1/Sushrutasamhita_Saktumiva2), `03-su.sa`, with six of its alignment files.
 * `rasendramangala-ch1`: [wujastyk/Rasendramangala](https://github.com/wujastyk/Rasendramangala), `chapter1`, licensed CC BY-SA 4.0.
   The TEI files have the extension `.txt`, and there are no alignment files, so everything is collated afresh.
+
+`stemma/` holds small TEI files for the Stemma view's tests (`tests/js/stemma.test.mjs`); see its README.

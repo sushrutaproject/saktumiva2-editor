@@ -27,6 +27,12 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 
 #topbar { height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 14px;
   border-bottom: 1px solid var(--line); background: var(--panel); }
+/* the buttons always fit: the project name and the status shrink (with "…") instead */
+#topbar > button, #topbar > .menu { flex-shrink: 0; white-space: nowrap; }
+#topbar .brand { flex: 0 20 auto; min-width: 0; max-width: 34vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#topbar .status { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#topbar .spacer { flex: 1 1 0; min-width: 0; }
+@media (min-width: 1000px) { #topbar .status { flex-shrink: 0; } }
 .status { font-size: 13px; padding: 3px 10px; border-radius: 12px; background: var(--chip); }
 .status.dirty { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .status.saved { color: var(--ok); }

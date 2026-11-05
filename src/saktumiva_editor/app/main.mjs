@@ -909,6 +909,7 @@ function applyLayoutPrefs() {
   const tl = $('#btn-toggle-left'), tr = $('#btn-toggle-right');
   tl.setAttribute('aria-pressed', String(!p.hideLeft)); tl.title = (p.hideLeft ? 'Show' : 'Hide') + ' the passage list ([)';
   tr.setAttribute('aria-pressed', String(!p.hideRight)); tr.title = (p.hideRight ? 'Show' : 'Hide') + ' the witnesses (])';
+  tr.textContent = p.hideRight ? '◂ Witnesses' : 'Witnesses ▸';
   const size = Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, Number(p.textSize) || TEXT_SIZE.normal));
   document.documentElement.style.setProperty('--text-size', size + 'px');
   $('#btn-text-reset').title = `Normal text size (now ${size}px)`;

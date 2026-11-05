@@ -5,6 +5,8 @@
 * If the editor is already running (perhaps forgotten in another terminal window), starting it again opens
   that copy in the browser instead of starting a second one. If all ports are taken, it says by what
   (listing the running editors and how to stop them) instead of showing a Python error.
+* Top bar: the buttons always stay visible in narrow windows (the project name and status are shortened
+  with "…" instead). The witnesses button is now at the far right ("Witnesses ▸", or "◂ Witnesses" when hidden).
 
 ## 0.4.0
 

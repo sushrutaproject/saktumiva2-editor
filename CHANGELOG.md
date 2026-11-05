@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+* If the editor is already running (perhaps forgotten in another terminal window), starting it again opens
+  that copy in the browser instead of starting a second one. If all ports are taken, it says by what
+  (listing the running editors and how to stop them) instead of showing a Python error.
+
 ## 0.4.0
 
 * Hide or show the passage list (☰ button, or the [ key) and the witnesses (Witnesses button, or ]).

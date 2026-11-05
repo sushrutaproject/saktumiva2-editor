@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* The witnesses toggle at the far right of the top bar is now a ☰ button, like the one for the passage list
+  at the far left.
+
 * Starting the editor reuses a copy that is already running only if it is the same version. After an
   update, an old copy still running is no longer opened in place of the new one; you are told it is
   still running instead.
@@ -12,7 +15,7 @@
   that copy in the browser instead of starting a second one. If all ports are taken, it says by what
   (listing the running editors and how to stop them) instead of showing a Python error.
 * Top bar: the buttons always stay visible in narrow windows (the project name and status are shortened
-  with "…" instead). The witnesses button is now at the far right ("Witnesses ▸", or "◂ Witnesses" when hidden).
+  with "…" instead). The witnesses button is now at the far right.
 
 ## 0.4.0
 

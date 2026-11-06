@@ -324,7 +324,9 @@ two ways to install it.
 4. Run `saktumiva-editor` (on Windows, `saktumiva-editor.exe`).
 
 A terminal window opens, and the editor opens in your web browser. **Leave the terminal window open while you
-work**; closing it (or pressing Ctrl+C in it) stops the editor.
+work**; closing it (or pressing Ctrl+C in it) stops the editor. If you start the editor again while it is still
+running (perhaps in a terminal window you forgot about), it does not start a second copy: it opens the running one in
+your browser.
 
 The first time only:
 
@@ -357,6 +359,9 @@ there is, it tells you what has changed and how to update, in the way that fits 
 * **Ready-made program**: a link to the new download. Download it, unzip it, and replace the old program with it.
 * **pipx**: a command to copy into a terminal, of the form `pipx install --force …`.
 
+Then stop the old copy (close its terminal window, or press Ctrl+C in it) and start the new one. If you forget, the
+new version tells you that an older copy is still running, and where.
+
 You can also check from a terminal:
 
 ```bash
@@ -374,13 +379,15 @@ program.
 
 Start the editor. The first screen is the **project chooser**:
 
-* **Recent projects** are listed at the top; click one to open it.
+* **Recently opened** lists the last six sections you worked on, most recent first. Click one to go straight to it,
+  or click **Project…** beside it to see that project's other sections.
 * Otherwise, under **Open a folder**, type the path of your repository's folder, or press **Browse…**, find the
   folder and press **Use this folder**.
 
 ```mermaid
 flowchart TD
     S["Start saktumiva-editor"] --> C["Project chooser"]
+    C -->|"a recently opened section"| E
     C -->|"choose your repository"| L["List of its sections<br/>(chapter1, chapter2 …)"]
     L -->|"a section opened for the first time"| U["Setup screen<br/>proposes the edition file and the witnesses"]
     U -->|"check, then confirm<br/>(writes editor.config.json)"| E["The editing screen"]
@@ -408,20 +415,24 @@ saktumiva-editor ~/git/Sushrutasamhita_Saktumiva2/03-su.sa     # open this secti
 
 ### The editing screen
 
+![The editing screen](https://github.com/user-attachments/assets/315f60d2-1ced-475c-b555-e36c4bdcc09a)
+
+Its parts:
+
 ```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ Saktumiva editor  chapter1     Undo Redo [Save] Publish History Settings Projects Help▾ │
-├──────────────┬─────────────────────────────────────────┬─────────────────────────┤
-│ Find…        │ ◀ SS.3.1.3 ▶   Edit text  TEI source  Add note │ Witnesses          │
-│ SS.3.1.1     │                                         │  K  athātaḥ …  [image] [edit] │
-│ SS.3.1.2     │  the passage, as in your edition file   │  N  athātaḥ …  [image] [edit] │
-│ SS.3.1.3  •  │  (underlined words have variants)       │  …                      │
-│ …            ├─────────────────────────────────────────┤                         │
-│              │ Apparatus             Correct alignment │  page image             │
-│              │  sarvva° ] sarva° K N          [use]    │  (when you open one)    │
-│              ├─────────────────────────────────────────┤                         │
-│              │ Notes                                   │                         │
-└──────────────┴─────────────────────────────────────────┴─────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ ☰ Saktumiva editor  chapter1   Undo Redo [Save] Publish History Settings Projects Help▾ ☰ │
+├──────────────┬──────────────────────────────────────────┬──────────────────────────────┤
+│ Find…        │ ◀ SS.3.1.3 ▶  Edit text  TEI source  Add note │ Witnesses               │
+│ SS.3.1.1     │                              A−  A  A+   │ ⠿ K  athātaḥ … [image] [edit] │
+│ SS.3.1.2     │  the passage, as in your edition file    │ ⠿ N  athātaḥ … [image] [edit] │
+│ SS.3.1.3  •  │  (underlined words have variants)        │  …                           │
+│ …            ├──────────────────────────────────────────┤                              │
+│              │ Apparatus              Correct alignment │  page image                  │
+│              │  sarvva° ] sarva° K N           [use]    │  (when you open one)         │
+│              ├──────────────────────────────────────────┤                              │
+│              │ Notes                                    │                              │
+└──────────────┴──────────────────────────────────────────┴──────────────────────────────┘
 ```
 
 * **Passage list** (left): every passage with an `xml:id`. Type in the box at the top to find a passage or words.
@@ -431,7 +442,17 @@ saktumiva-editor ~/git/Sushrutasamhita_Saktumiva2/03-su.sa     # open this secti
 * **Apparatus**: made by Saktumiva for this passage. The first time you open a passage, the editor collates it
   (this may take a moment for long prose passages; afterwards the result is kept).
 * **Witnesses** (right): each witness's text of the passage, with buttons for its page image and for correcting
-  its transcription.
+  its transcription. Drag a witness by its handle (⠿) to put the list in the order you like; witnesses that lack
+  the passage are always listed last.
+
+Make the screen fit your way of working: the **☰** button at the far left (or the [ key) hides and shows the
+passage list, and the **☰** at the far right (or the ] key) the witnesses. **A− A A+** above the text (or
+Ctrl+−, Ctrl+0, Ctrl++) change the size of the text. The editor remembers these choices, and the order of the
+witnesses, the next time you start it.
+
+If your edition's header contains a stemma (a `<stemma format="nexml">`, as SplitsTree6 and Saktumiva write it), a
+**Stemma** button appears in the top bar and draws it, with the sigla at the leaves. **Download SVG** saves the
+drawing. Making a stemma is beyond this tutorial: see Charles Li's guide, listed at the end.
 
 **Help ▾ → Using the editor** describes every part of the screen.
 

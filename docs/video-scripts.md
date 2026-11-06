@@ -81,22 +81,25 @@ such as *Editing Sanskrit texts with Saktumiva*. Each video covers one or two pa
 | Download the Windows zip, unzip, double-click `saktumiva-editor.exe`; SmartScreen → **More info → Run anyway** | Download the one for your computer and unzip it. On Windows, the first time, SmartScreen asks: More info, Run anyway. |
 | (Cut) macOS: right-click → **Open** → **Open** | On a Mac, right-click and choose Open the first time. |
 | The terminal window, then the browser with the project chooser | A terminal window opens, and then the editor in your browser. Keep the terminal open while you work; closing it stops the editor. |
+| Start it a second time; the browser opens the same editor | If you start it again while it's running, it just opens the copy that's already running. |
 | (Optional) `pipx install git+https://github.com/sushrutaproject/saktumiva2-editor.git` | If you use Python, you can install it with pipx instead. |
 | **Help ▾ → Check for updates…** showing "up to date", then (staged) a newer version with a download link | To see whether there's a newer version: Help, Check for updates. It tells you what's new and how to update. For the ready-made program, download the new one and replace the old. Your files are never touched: they live in your repository, not in the program. |
+| Close the old terminal window; start the new version | Then close the old copy and start the new one. If you forget, the new one tells you the old one is still running. |
 | Terminal: `saktumiva-editor --check-updates` | You can also check from a terminal. |
 
 ---
 
-## Video 6. Opening your section — 4 min
+## Video 6. Opening your section — 5 min
 
 | SHOW | SAY |
 |---|---|
-| The chooser: *Recent projects* empty; **Open a folder → Browse…**, find the repository, **Use this folder** | The first screen is the project chooser. Open your repository's folder. |
+| The chooser: *Recently opened* empty; **Open a folder → Browse…**, find the repository, **Use this folder** | The first screen is the project chooser. Open your repository's folder. |
 | The list of sections (chapter1) | The editor finds the sections in it. |
 | The setup screen: Edition, Witnesses, Publish to | The first time you open a section, it proposes which file is the edition and which are the witnesses. Check it. Here I set *Publish to* to the name without `_new`. |
 | **Create editor.config.json and open** | Confirm, and the choice is saved in the section folder as editor.config.json. Commit that too. |
 | The editing screen; Saktumiva collates the first passage | And here's the editing screen. The first time you look at a passage, Saktumiva collates it. |
-| Restart the editor: the project is under *Recent projects* | Next time, it's in the recent list. |
+| Press [ and ] (the ☰ buttons); A+; drag a witness by ⠿ | Hide the passage list or the witnesses when you need room, make the text bigger, and drag the witnesses into the order you like. The editor remembers all of this. |
+| Restart the editor: the section is under *Recently opened*; point at **Project…** | Next time, the section is in the recently opened list: one click takes you straight back. Project… shows the project's other sections. |
 
 ---
 

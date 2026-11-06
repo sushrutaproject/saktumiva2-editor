@@ -124,6 +124,9 @@ online until you push. Work cycle: edit → Publish → check the published file
   Kpc for corrected witnesses, normalized spellings, one character per word group, gaps significant; alignments
   brought up to date first, or the saved files as they are. The NeXML that SplitsTree saves can go into the
   teiHeader for the Stemma button.
+  **Distances between whole witnesses (NEXUS)…**: the texts compared as wholes, without an alignment, as on
+  Saktumiva's tree page (n-grams, compression distance or byte-pair encoding), by default only over the passages all
+  the chosen witnesses have; saved as a NEXUS distance matrix for SplitsTree.
 * **Stemma** (top bar, shown only if the edition has one): draws the `<stemma format="nexml">` of the edition's
   teiHeader (in `<xenoData>`, as SplitsTree6 or Saktumiva write it) as a stemma codicum, sigla at the leaves.
   Branch lengths in proportion (with a scale bar) or one step per generation; straight or right-angled lines;
@@ -189,7 +192,8 @@ saktumiva-editor
 * `src/saktumiva_editor/server.py`: the local server (Python standard library only); `cli.py`, `project.py`
   (sections, configuration, recent projects), `updates.py` (GitHub Releases).
 * `src/saktumiva_editor/app/`: the editing screen (`index.html`, `main.mjs` …) and the project chooser (`chooser.*`).
-  `nexus.mjs` makes the NEXUS matrix from alignment files; `stemma.mjs` reads and draws the stemmata; it needs no other file and returns plain SVG, so it can be used on a web page as well.
+  `nexus.mjs` makes the NEXUS matrix from alignment files; `distances.mjs` (run in `distanceworker.mjs`) the distances
+  between whole texts; `stemma.mjs` reads and draws the stemmata; it needs no other file and returns plain SVG, so it can be used on a web page as well.
 * `src/saktumiva_editor/app/saktumiva/`: **Saktumiva, as a git submodule** pinned to one commit of
   [chchch/saktumiva](https://github.com/chchch/saktumiva). Only its `lib/` and the OpenSeadragon image viewer are
   served and packaged.
@@ -209,7 +213,7 @@ The regression tests run the editor's collation and apparatus code, with the pin
 (`tests/fixtures`: the Suśrutasaṃhitā Śārīrasthāna and Rasendramaṅgala chapter 1) and compare the alignments,
 apparatus and published `<standOff>` with the stored results in `tests/golden`. `stemma.test.mjs` tests the Stemma view
 on the NeXML of SplitsTree6, Saktumiva and Bio::Phylo (`tests/fixtures/stemma` and the Rasendramaṅgala fixture);
-`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`). They also check that the patch
+`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`); `distances.test.mjs` the distances. They also check that the patch
 still fits and still matters (switching script notes off must change the apparatus of certain passages).
 
 ### Updating Saktumiva

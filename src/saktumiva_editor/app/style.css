@@ -211,6 +211,17 @@ dialog.wide { width: min(860px, 94vw); }
 #nexus-wits { columns: 2; }
 #nexus-wits label.chk { break-inside: avoid; }
 #nexus-progress { width: 100%; margin-top: 10px; }
+#dist-dialog { width: min(600px, 92vw); }
+#dist-form h4 { margin: 14px 0 4px; font-size: 13px; }
+#dist-form label.chk { display: block; font-weight: normal; margin: 3px 0; font-size: 14px; }
+#dist-form label.chk input[type=radio], #dist-form label.chk input[type=checkbox] { display: inline; width: auto; margin: 0 5px 0 0; vertical-align: -1px; }
+#dist-form input.num { display: inline; width: 4.5em; padding: 1px 4px; margin: 0 2px; font: inherit; }
+#dist-wits { columns: 2; }
+#dist-wits label.chk { break-inside: avoid; }
+#dist-progress { width: 100%; margin-top: 10px; }
+#dist-table table { border-collapse: collapse; font: 12.5px var(--sans); margin-top: 6px; }
+#dist-table th, #dist-table td { padding: 2px 8px; text-align: right; border-bottom: 1px solid var(--line); }
+#dist-table th { font-weight: 600; }
 
 /* stemma */
 #stemma-dialog .stemma-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 10px 0 8px; }

@@ -11,6 +11,15 @@
   or the saved alignment files are used as they are (fast). Each character is named after its passage (e.g.
   `SS.1.1.3.2`), the readings are given in Harvard-Kyoto, and a comment at the top records the choices made.
   Unlike Saktumiva, lost text (‡) is written as missing (?), not as a reading of its own.
+* **Data export → Distances between whole witnesses (NEXUS)…**: the witnesses' texts compared as wholes, without an
+  alignment, as on Saktumiva's tree page, with its three measures (n-grams with tf-idf and cosine distance,
+  normalized compression distance, byte-pair encoding), tokenized and normalized as in Settings; saved as a NEXUS
+  distance matrix for SplitsTree (Neighbor-Net, neighbour-joining) and shown in the dialog. By default only the
+  passages that all the chosen witnesses have are compared, so that a witness that covers less of the section is
+  not counted as different for that; or each witness's whole text. Kac or Kpc for witnesses with corrections.
+  Unlike the tree page, the measured distances are written, not those read off its own guide tree (from which a
+  network could only show that tree again); and the byte-pair merges asked for are used (the tree page always
+  used 600).
 
 ## 0.4.3
 

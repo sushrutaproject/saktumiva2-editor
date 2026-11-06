@@ -303,7 +303,7 @@ def forget(section: str):
 
 # ------------------------------------------------------------------ preferences
 
-PREF_KEYS = {'witnessOrder', 'hideLeft', 'hideRight', 'textSize', 'stemma', 'nexus'}
+PREF_KEYS = {'witnessOrder', 'hideLeft', 'hideRight', 'textSize', 'stemma', 'nexus', 'distances'}
 
 
 def prefs() -> dict:

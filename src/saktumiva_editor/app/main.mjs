@@ -6,6 +6,7 @@ import saktumivaIgnoreTags from './saktumiva/lib/tagfilters.mjs';
 import { setupMenu, checkForUpdates, showAbout } from './common.mjs';
 import { findStemmata, layoutTree, renderSVG, sigla as stemmaSigla } from './stemma.mjs';
 import { buildNexus } from './nexus.mjs';
+import { distancesNexus, MEASURES } from './distances.mjs';
 
 // ================================================================ helpers
 const $ = (s, r = document) => r.querySelector(s);
@@ -1844,10 +1845,7 @@ function openNexus() {
   $('#nexus-all-label').textContent = `All ${S.blocks.length} passages of ${S.editionFile}`;
   $('#nexus-current-label').textContent = `This passage only (${S.current})`;
   $('#nexus-files-label').textContent = `The saved alignment files (${S.cfg.alignmentsDir || 'alignments'}/) as they are`;
-  // the witnesses, and the edition itself (off: it is the editor's reconstruction, not a witness)
-  const wits = [...S.witnesses.map(w => [w.siglum, w.title, true]), [S.edSiglum, `the edition (${S.editionFile})`, false]];
-  $('#nexus-wits').replaceChildren(...wits.map(([sig, title, on]) =>
-    h('label', {class: 'chk', title}, h('input', {type: 'checkbox', value: sig, ...(on ? {checked: ''} : {})}), ' ', sig)));
+  witnessChoice($('#nexus-wits'));
   $('#nexus-progress').hidden = true;
   $('#nexus-status').textContent = '';
   $('#nexus-form').inert = false;
@@ -1907,6 +1905,90 @@ $('#btn-nexus-go').addEventListener('click', runNexus);
 $('#btn-nexus-cancel').addEventListener('click', () => { if (nexusRun) nexusRun.cancel = true; nexusRun = null; $('#nexus-dialog').close(); });
 $('#nexus-dialog').addEventListener('close', () => { if (nexusRun) nexusRun.cancel = true; nexusRun = null; });
 
+// ---------------------------------------------------------------- data export: distances between whole witnesses
+// Saktumiva's tree page: the witnesses' texts compared as wholes (no alignment), the distances as NEXUS.
+const distOpts = () => ({scope: 'common', corrections: 'ac', measure: 'ngrams', ngramSize: 3, bpeIterations: 600, ...(S.prefs?.distances || {})});
+let distRun = null;
+// the witnesses, and the edition itself (off: it is the editor's reconstruction, not a witness)
+function witnessChoice(box) {
+  const wits = [...S.witnesses.map(w => [w.siglum, w.title, true]), [S.edSiglum, `the edition (${S.editionFile})`, false]];
+  box.replaceChildren(...wits.map(([sig, title, on]) =>
+    h('label', {class: 'chk', title}, h('input', {type: 'checkbox', value: sig, ...(on ? {checked: ''} : {})}), ' ', sig)));
+}
+function openDistances() {
+  const o = distOpts();
+  for (const [name, v] of [['dist-scope', o.scope], ['dist-corr', o.corrections], ['dist-measure', o.measure]]) {
+    const r = $(`#dist-dialog input[name="${name}"][value="${v}"]`); if (r) r.checked = true;
+  }
+  $('#dist-ngram').value = o.ngramSize; $('#dist-bpe').value = o.bpeIterations;
+  const f = S.collator.filtersnames;
+  $('#dist-settings').textContent = `tokenization: ${S.collator.settings.tokenization}; ${f.length || 'no'} normalization${f.length === 1 ? '' : 's'}`;
+  $('#dist-settings').title = f.join(', ');
+  witnessChoice($('#dist-wits'));
+  $('#dist-progress').hidden = true;
+  $('#dist-status').textContent = '';
+  $('#dist-table').replaceChildren();
+  $('#dist-form').inert = false;
+  $('#btn-dist-go').disabled = false;
+  $('#btn-dist-cancel').textContent = 'Cancel';
+  $('#dist-dialog').showModal();
+}
+const radio = name => $(`#dist-dialog input[name="${name}"]:checked`).value;
+async function runDistances() {
+  let taxa = [...$('#dist-wits').querySelectorAll('input:checked')].map(i => i.value);
+  const status = $('#dist-status');
+  if (taxa.length < 3) { status.textContent = 'Choose at least three witnesses (a tree needs three).'; return; }
+  const o = {scope: radio('dist-scope'), corrections: radio('dist-corr'), measure: radio('dist-measure'),
+             ngramSize: Math.max(1, parseInt($('#dist-ngram').value) || 3), bpeIterations: Math.max(1, parseInt($('#dist-bpe').value) || 600)};
+  savePrefs({distances: o});
+  const run = distRun = {cancel: false, worker: null};
+  $('#dist-form').inert = true; $('#btn-dist-go').disabled = true;
+  $('#dist-progress').hidden = false; $('#dist-progress').removeAttribute('value');
+  status.textContent = 'Reading the texts…';
+  await new Promise(r => setTimeout(r, 30));            // let the dialog show it
+  const parts = S.collator.wholeTexts(S.blocks, taxa, o.corrections);
+  if (run.cancel) return;
+  // a witness with none of the edition's passages (e.g. other xml:ids) cannot be compared: left out
+  const none = taxa.filter(s => !parts.get(s).size);
+  taxa = taxa.filter(s => parts.get(s).size);
+  const noneNote = none.length ? ` Left out, as ${none.length > 1 ? 'they have' : 'it has'} none of the edition’s passages: ${none.join(', ')}.` : '';
+  const stop = msg => { status.textContent = msg; $('#dist-progress').hidden = true; $('#dist-form').inert = false; $('#btn-dist-go').disabled = false; distRun = null; };
+  if (taxa.length < 3) return stop('Fewer than three of the chosen witnesses have text in this section’s passages.' + noneNote);
+  const blocks = o.scope === 'common' ? S.blocks.filter(b => taxa.every(s => parts.get(s).has(b))) : S.blocks;
+  if (!blocks.length) return stop('The chosen witnesses have no passage in common. Choose fewer witnesses, or all the passages each has.');
+  const texts = taxa.map(s => [s, blocks.flatMap(b => parts.get(s).get(b) || [])]);
+  status.textContent = `Measuring (${MEASURES[o.measure]}) over ${o.scope === 'common' ? `the ${blocks.length} passages all have` : 'all their passages'}…`;
+  const res = await new Promise(resolve => {
+    const w = run.worker = new Worker('./distanceworker.mjs', {type: 'module'});
+    w.onmessage = e => resolve(e.data);
+    w.onerror = e => resolve({error: e.message || 'the computation failed'});
+    w.postMessage({texts, opts: o});
+  });
+  run.worker?.terminate();
+  if (run.cancel) return;
+  if (res.error) return stop('Not computed: ' + res.error);
+  const m = o.measure === 'ngrams' ? `${MEASURES.ngrams}, n = ${o.ngramSize}` : o.measure === 'bpe' ? `${MEASURES.bpe}, ${o.bpeIterations} merges` : MEASURES.ncd;
+  const f = S.collator.filtersnames;
+  const title = `${S.editionFile}: distances between ${taxa.join(', ')}; ${m}; ` +
+    (o.scope === 'common' ? `the ${blocks.length} passages all have` : 'all the passages each has') +
+    `; tokenization ${S.collator.settings.tokenization}; normalization ${f.length ? f.join(', ') : 'none'}; ${o.corrections === 'pc' ? 'post' : 'ante'} correctionem. Saktumiva editor ${S.version || ''}`;
+  const name = `${S.editionFile.replace(/\.[^.]+$/, '')}_distances-${o.measure}.nex`;
+  download(name, distancesNexus(taxa, res.matrix, {title}));
+  $('#dist-progress').hidden = true;
+  const sizes = texts.map(([s, t]) => `${s} ${t.length}`).join(', ');
+  status.textContent = `Saved ${name} (in your downloads): ${m}, over ${o.scope === 'common' ? `the ${blocks.length} passages (of ${S.blocks.length}) all have` : 'all the passages each has'} (tokens: ${sizes}).${noneNote}`;
+  $('#dist-table').replaceChildren(h('table', {},
+    h('tr', {}, h('th', {}), ...taxa.map(s => h('th', {}, s))),
+    ...taxa.map((s, i) => h('tr', {}, h('th', {}, s), ...res.matrix[i].map(x => h('td', {}, x.toFixed(3)))))));
+  $('#btn-dist-cancel').textContent = 'Close';
+  distRun = null;
+}
+$('#btn-export-distances').addEventListener('click', openDistances);
+$('#btn-dist-go').addEventListener('click', runDistances);
+const endDist = () => { if (distRun) { distRun.cancel = true; distRun.worker?.terminate(); } distRun = null; };
+$('#btn-dist-cancel').addEventListener('click', () => { endDist(); $('#dist-dialog').close(); });
+$('#dist-dialog').addEventListener('close', endDist);
+
 $('#btn-help').addEventListener('click', () => showInfo('Using the editor',
   h('p', {}, 'The text you see is the edition file itself. Changes stay in this window until you press Save; then they are written to the TEI file (only the passages and notes you changed) and committed to git.'),
   h('h3', {}, 'Choosing readings'), h('p', {}, 'Click a word in the text, or point at an apparatus entry, to see its lemma. Press “use” beside a reading to put it in the text. The passage is collated again at once, so the old lemma becomes a variant.'),
@@ -1916,6 +1998,7 @@ $('#btn-help').addEventListener('click', () => showInfo('Using the editor',
   h('h3', {}, 'Publishing'), h('p', {}, '“Publish” writes a separate file (named in Settings) containing your edition and notes followed by Saktumiva’s apparatus for every passage (<standOff type="apparatus">), using your corrected alignments where you made them. The alignment files are brought up to date in the same step, and the whole is one git commit. Your edition file itself is not changed.'),
   h('h3', {}, 'Notes'), h('p', {}, 'Select a word and press “Add note here”. The anchor and the <standOff> note are created with matching ids. Edit or delete notes in the Notes panel.'),
   h('h3', {}, 'Data export'), h('p', {}, 'NEXUS for SplitsTree: a character matrix of the aligned readings of the whole section (or this passage), as Saktumiva’s matrix editor exports it. Choose the witnesses (the edition itself is left out unless you tick it) and whether to normalize spellings, merge word groups and count gaps. Passages not yet collated are collated first.'),
+  h('p', {}, 'Distances between whole witnesses: the texts compared as wholes, without an alignment, as on Saktumiva’s tree page (n-grams, compression distance or byte-pair encoding), saved as a NEXUS distance matrix. By default only the passages all the chosen witnesses have are compared.'),
   h('h3', {}, 'Stemma'), h('p', {}, 'If the edition’s teiHeader has a <stemma format="nexml"> (in <xenoData>, as SplitsTree6 or Saktumiva write it), the Stemma button draws it: the sigla at the leaves, branch lengths in proportion or one step per generation. Download SVG saves the drawing.'),
   h('h3', {}, 'Keys'), h('p', {}, h('kbd', {}, 'Alt ↑/↓'), ' previous/next passage · ', h('kbd', {}, 'E'), ' edit text · ', h('kbd', {}, 'A'), ' correct alignment · ', h('kbd', {}, 'N'), ' add note · ', h('kbd', {}, 'Ctrl Z'), ' undo · ', h('kbd', {}, 'Ctrl S'), ' save · ', h('kbd', {}, 'Esc'), ' cancel editing'),
   h('p', {class: 'muted'}, 'Undo works until you save. After that, every saved version is in git (History).')));

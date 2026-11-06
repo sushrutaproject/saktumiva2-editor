@@ -353,6 +353,28 @@ export class Collator {
     this.worker.postMessage([texts, configfunc, this.settings.scoring]);
   }
 
+  // ---------------------------------------------------------- whole texts (for distances)
+  // The text of each witness in `sigla` for the passages `blocks`, cleaned, normalized and tokenized as for
+  // collation, the passages one after another: what Saktumiva's tree page compares. A witness with <add>/<del>
+  // is taken ante or post correctionem (`corr`: Kac, Kpc). -> Map(siglum -> Map(block -> tokens)), in passage order
+  wholeTexts(blocks, sigla, corr = 'ac') {
+    const splitfunc = findSplitfunc(this.settings.tokenization);
+    const want = new Set(sigla.flatMap(s => [s, s + 'ac', s + 'pc']));
+    const entries = [...this.state.alltexts].filter(([k]) => want.has(k)).map(([k, text]) => ({siglum: k, text}));
+    const out = new Map(sigla.map(s => [s, new Map()]));
+    for (const b of blocks) {
+      let res;
+      try { res = preProcess(b, entries, {splitfunc, selectedfilters: this.filtersindices, ignoretags: this.ignore}); }
+      catch { continue; }
+      const got = new Map(res.map(r => [r.siglum, r.text]));
+      for (const s of sigla) {
+        const t = got.get(s) ?? got.get(s + corr);   // without corrections in this passage, Saktumiva gives the plain siglum
+        if (t && t.length) out.get(s).set(b, t);
+      }
+    }
+    return out;
+  }
+
   // ---------------------------------------------------------- publishing
   // Adds <standOff type="apparatus"> for one passage (and any missing witnesses) to `doc`,
   // using Saktumiva's own makeApp / addWitnesses / addApparatus, as its command-line tool does.

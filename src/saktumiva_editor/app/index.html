@@ -22,6 +22,7 @@
     <button id="btn-export-menu" aria-haspopup="true" aria-expanded="false" title="Export data from this section">Data export ▾</button>
     <div class="menu-items" role="menu" hidden>
       <button role="menuitem" id="btn-export-nexus">NEXUS for SplitsTree…</button>
+      <button role="menuitem" id="btn-export-distances">Distances between whole witnesses (NEXUS)…</button>
     </div>
   </div>
   <button id="btn-info" title="Files and collation settings">Settings</button>
@@ -178,6 +179,32 @@
   <div class="dialog-buttons"><span class="spacer"></span>
     <button id="btn-nexus-cancel">Cancel</button>
     <button id="btn-nexus-go" class="primary">Export</button>
+  </div>
+</dialog>
+
+<dialog id="dist-dialog">
+  <h3>Distances between whole witnesses</h3>
+  <p class="muted">How far apart the witnesses’ texts are as wholes, measured as on Saktumiva’s tree page, without an alignment. The distances are saved as a NEXUS file for SplitsTree (e.g. Neighbor-Net or neighbour-joining). The texts are tokenized and normalized as set in Settings (<span id="dist-settings"></span>).</p>
+  <div id="dist-form">
+    <h4>Passages</h4>
+    <label class="chk"><input type="radio" name="dist-scope" value="common" checked> Only the passages that all the chosen witnesses have (a fair comparison)</label>
+    <label class="chk"><input type="radio" name="dist-scope" value="all"> All the passages each witness has (the whole texts, as on Saktumiva’s tree page)</label>
+    <h4>Witnesses</h4>
+    <div id="dist-wits" class="cols"></div>
+    <h4>Witnesses with corrections (&lt;add&gt;, &lt;del&gt;)</h4>
+    <label class="chk"><input type="radio" name="dist-corr" value="ac" checked> Ante correctionem: the first hand</label>
+    <label class="chk"><input type="radio" name="dist-corr" value="pc"> Post correctionem: the corrected text</label>
+    <h4>Measure</h4>
+    <label class="chk"><input type="radio" name="dist-measure" value="ngrams" checked> n-grams of <input type="number" id="dist-ngram" min="1" max="12" value="3" class="num"> tokens (cosine distance, tf-idf weighted)</label>
+    <label class="chk"><input type="radio" name="dist-measure" value="ncd"> Normalized compression distance (NCD)</label>
+    <label class="chk"><input type="radio" name="dist-measure" value="bpe"> Byte-pair encoding, <input type="number" id="dist-bpe" min="1" max="5000" value="600" class="num"> merges (cosine distance)</label>
+  </div>
+  <progress id="dist-progress" hidden></progress>
+  <p id="dist-status"></p>
+  <div id="dist-table"></div>
+  <div class="dialog-buttons"><span class="spacer"></span>
+    <button id="btn-dist-cancel">Cancel</button>
+    <button id="btn-dist-go" class="primary">Export</button>
   </div>
 </dialog>
 

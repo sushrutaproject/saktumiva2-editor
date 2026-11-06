@@ -95,3 +95,5 @@ def test_preferences():
     assert project.prefs()['stemma'] == {'proportional': False, 'lines': 'square'}
     project.set_prefs({'nexus': {'normalize': True, 'mergeGroups': False, 'gapsSignificant': False, 'corrections': 'pc'}})
     assert project.prefs()['nexus']['corrections'] == 'pc'
+    project.set_prefs({'distances': {'measure': 'ncd', 'scope': 'common'}})
+    assert project.prefs()['distances']['measure'] == 'ncd'

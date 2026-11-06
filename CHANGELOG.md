@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.3
 
 * **Stemma** (top bar): if the edition's teiHeader has a `<stemma format="nexml">` (in `<xenoData>`, as SplitsTree6 and
   Saktumiva write it), the button draws it as a stemma codicum: the root at the top, the witnesses' sigla at the

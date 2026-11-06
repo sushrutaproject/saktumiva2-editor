@@ -203,6 +203,15 @@ dialog.wide { width: min(860px, 94vw); }
 #settings-form table.small th { text-align: left; padding-right: 12px; vertical-align: top; }
 #settings-form table.small td { font-size: 13px; }
 
+/* data export: NEXUS */
+#nexus-dialog { width: min(560px, 92vw); }
+#nexus-form h4 { margin: 14px 0 4px; font-size: 13px; }
+#nexus-form label.chk { display: block; font-weight: normal; margin: 3px 0; font-size: 14px; }
+#nexus-form label.chk input { display: inline; width: auto; margin: 0 5px 0 0; vertical-align: -1px; }
+#nexus-wits { columns: 2; }
+#nexus-wits label.chk { break-inside: avoid; }
+#nexus-progress { width: 100%; margin-top: 10px; }
+
 /* stemma */
 #stemma-dialog .stemma-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 10px 0 8px; }
 #stemma-dialog label.chk { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-weight: normal; font-size: 13px; }

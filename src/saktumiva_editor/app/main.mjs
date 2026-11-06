@@ -5,6 +5,7 @@ import { AlignMatrix } from './aligner.mjs';
 import saktumivaIgnoreTags from './saktumiva/lib/tagfilters.mjs';
 import { setupMenu, checkForUpdates, showAbout } from './common.mjs';
 import { findStemmata, layoutTree, renderSVG, sigla as stemmaSigla } from './stemma.mjs';
+import { buildNexus } from './nexus.mjs';
 
 // ================================================================ helpers
 const $ = (s, r = document) => r.querySelector(s);
@@ -1825,6 +1826,87 @@ $('#btn-stemma-svg').addEventListener('click', () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
 
+// ---------------------------------------------------------------- data export: NEXUS for SplitsTree
+// The alignments of the passages (collating those not yet collated, as Publish does) -> one character matrix.
+const download = (name, text, type = 'text/plain') => {
+  const a = h('a', {href: URL.createObjectURL(new Blob([text], {type: `${type};charset=utf-8`})), download: name});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+const nexusOpts = () => ({normalize: true, mergeGroups: true, gapsSignificant: false, ...(S.prefs?.nexus || {})});
+let nexusRun = null;
+function openNexus() {
+  const o = nexusOpts();
+  $('#nexus-normalize').checked = o.normalize;
+  $('#nexus-merge').checked = o.mergeGroups;
+  $('#nexus-gaps').checked = o.gapsSignificant;
+  $(`#nexus-dialog input[name="nexus-corr"][value="${o.corrections === 'pc' ? 'pc' : 'ac'}"]`).checked = true;
+  $('#nexus-all-label').textContent = `All ${S.blocks.length} passages of ${S.editionFile}`;
+  $('#nexus-current-label').textContent = `This passage only (${S.current})`;
+  $('#nexus-files-label').textContent = `The saved alignment files (${S.cfg.alignmentsDir || 'alignments'}/) as they are`;
+  // the witnesses, and the edition itself (off: it is the editor's reconstruction, not a witness)
+  const wits = [...S.witnesses.map(w => [w.siglum, w.title, true]), [S.edSiglum, `the edition (${S.editionFile})`, false]];
+  $('#nexus-wits').replaceChildren(...wits.map(([sig, title, on]) =>
+    h('label', {class: 'chk', title}, h('input', {type: 'checkbox', value: sig, ...(on ? {checked: ''} : {})}), ' ', sig)));
+  $('#nexus-progress').hidden = true;
+  $('#nexus-status').textContent = '';
+  $('#nexus-form').inert = false;
+  $('#btn-nexus-go').disabled = false;
+  $('#nexus-dialog').showModal();
+}
+async function runNexus() {
+  const taxa = [...$('#nexus-wits').querySelectorAll('input:checked')].map(i => i.value);
+  if (taxa.length < 2) { $('#nexus-status').textContent = 'Choose at least two witnesses.'; return; }
+  const opts = {normalize: $('#nexus-normalize').checked, mergeGroups: $('#nexus-merge').checked, gapsSignificant: $('#nexus-gaps').checked,
+                corrections: $('#nexus-dialog input[name="nexus-corr"]:checked').value};
+  savePrefs({nexus: opts});
+  const all = $('#nexus-dialog input[name="nexus-scope"]:checked').value === 'all';
+  const ids = all ? S.blocks : [S.current];
+  const asSaved = $('#nexus-dialog input[name="nexus-source"]:checked').value === 'files';
+  const run = nexusRun = {cancel: false};
+  $('#nexus-form').inert = true;
+  $('#btn-nexus-go').disabled = true;
+  const bar = $('#nexus-progress'), status = $('#nexus-status');
+  bar.hidden = false; bar.value = 0;
+  const passages = [], none = [];
+  const t0 = performance.now();
+  for (const [k, id] of ids.entries()) {
+    if (run.cancel) return;
+    const left = k ? Math.round((performance.now() - t0) / k * (ids.length - k) / 60000) : 0;
+    status.textContent = `${id} — ${k + 1} of ${ids.length}${left > 0 ? ` (about ${left} min left)` : ''}`;
+    bar.value = k / ids.length;
+    if (asSaved) {
+      const x = S.cfg.alignmentsDir ? await alignFileText(id) : null;
+      if (x) passages.push({id, xml: x}); else none.push([id, 'no alignment file']);
+      continue;
+    }
+    let res = null;
+    try { res = await getResult(id, {priority: 'high'}); } catch (e) { none.push([id, e.message]); continue; }
+    if (!res || res.none || !res.alignXML) { none.push([id, res?.reason || 'no alignment']); continue; }
+    passages.push({id, xml: res.alignXML});
+  }
+  if (run.cancel) return;
+  bar.value = 1;
+  const how = [opts.normalize ? 'normalized spellings' : 'spellings as written', opts.mergeGroups ? 'one character per word group' : 'one character per aligned cell',
+    opts.gapsSignificant ? 'gaps significant' : 'gaps not significant', opts.corrections === 'pc' ? 'post correctionem' : 'ante correctionem',
+    asSaved ? 'saved alignment files' : 'alignments up to date with the texts'];
+  const r = buildNexus(passages, taxa, {...opts, title: `${S.editionFile}${all ? '' : ', ' + S.current}: ${taxa.join(', ')}; ${how.join(', ')}. Saktumiva editor ${S.version || ''}`.trim()});
+  none.push(...r.skipped);
+  const base = S.editionFile.replace(/\.[^.]+$/, '');
+  if (r.nchar) download(`${base}${all ? '' : '_' + S.current}.nex`, r.text);
+  status.replaceChildren(
+    r.nchar ? `Saved ${base}${all ? '' : '_' + S.current}.nex (in your downloads): ${r.ntax} witnesses, ${r.nchar} characters from ${r.passages} passage${r.passages === 1 ? '' : 's'}.`
+            : 'Nothing to export: no passage has an alignment.',
+    ...(r.tooMany ? [h('br'), `${r.tooMany} character(s) have more readings than NEXUS symbols (54); the extra readings are written as ?.`] : []),
+    ...(none.length ? [h('br'), `Left out (${none.length}): ${none.slice(0, 8).map(([id, why]) => `${id} (${why})`).join('; ')}${none.length > 8 ? ' …' : ''}`] : []));
+  $('#btn-nexus-cancel').textContent = 'Close';
+  nexusRun = null;
+}
+$('#btn-export-nexus').addEventListener('click', () => { $('#btn-nexus-cancel').textContent = 'Cancel'; openNexus(); });
+$('#btn-nexus-go').addEventListener('click', runNexus);
+$('#btn-nexus-cancel').addEventListener('click', () => { if (nexusRun) nexusRun.cancel = true; nexusRun = null; $('#nexus-dialog').close(); });
+$('#nexus-dialog').addEventListener('close', () => { if (nexusRun) nexusRun.cancel = true; nexusRun = null; });
+
 $('#btn-help').addEventListener('click', () => showInfo('Using the editor',
   h('p', {}, 'The text you see is the edition file itself. Changes stay in this window until you press Save; then they are written to the TEI file (only the passages and notes you changed) and committed to git.'),
   h('h3', {}, 'Choosing readings'), h('p', {}, 'Click a word in the text, or point at an apparatus entry, to see its lemma. Press “use” beside a reading to put it in the text. The passage is collated again at once, so the old lemma becomes a variant.'),
@@ -1833,12 +1915,14 @@ $('#btn-help').addEventListener('click', () => showInfo('Using the editor',
   h('h3', {}, 'Trivial variants'), h('p', {}, 'Settings lists Saktumiva’s normalizations (final nasals, visarga sandhi, b/v …): readings that differ only in these ways are kept as “minor” readings, not variants. Each witness’s <scriptNote>s (e.g. script-ba-va) are obeyed for that witness alone.'),
   h('h3', {}, 'Publishing'), h('p', {}, '“Publish” writes a separate file (named in Settings) containing your edition and notes followed by Saktumiva’s apparatus for every passage (<standOff type="apparatus">), using your corrected alignments where you made them. The alignment files are brought up to date in the same step, and the whole is one git commit. Your edition file itself is not changed.'),
   h('h3', {}, 'Notes'), h('p', {}, 'Select a word and press “Add note here”. The anchor and the <standOff> note are created with matching ids. Edit or delete notes in the Notes panel.'),
+  h('h3', {}, 'Data export'), h('p', {}, 'NEXUS for SplitsTree: a character matrix of the aligned readings of the whole section (or this passage), as Saktumiva’s matrix editor exports it. Choose the witnesses (the edition itself is left out unless you tick it) and whether to normalize spellings, merge word groups and count gaps. Passages not yet collated are collated first.'),
   h('h3', {}, 'Stemma'), h('p', {}, 'If the edition’s teiHeader has a <stemma format="nexml"> (in <xenoData>, as SplitsTree6 or Saktumiva write it), the Stemma button draws it: the sigla at the leaves, branch lengths in proportion or one step per generation. Download SVG saves the drawing.'),
   h('h3', {}, 'Keys'), h('p', {}, h('kbd', {}, 'Alt ↑/↓'), ' previous/next passage · ', h('kbd', {}, 'E'), ' edit text · ', h('kbd', {}, 'A'), ' correct alignment · ', h('kbd', {}, 'N'), ' add note · ', h('kbd', {}, 'Ctrl Z'), ' undo · ', h('kbd', {}, 'Ctrl S'), ' save · ', h('kbd', {}, 'Esc'), ' cancel editing'),
   h('p', {class: 'muted'}, 'Undo works until you save. After that, every saved version is in git (History).')));
 
 // ================================================================ wiring
 setupMenu($('#help-menu'));
+setupMenu($('#export-menu'));
 $('#btn-updates').addEventListener('click', checkForUpdates);
 $('#btn-about').addEventListener('click', showAbout);
 $('#btn-projects').addEventListener('click', () => { location.href = '/choose'; });  // beforeunload warns about unsaved changes

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+* **Data export** menu (top bar), with **NEXUS for SplitsTree…**: a character matrix of the aligned readings of the
+  whole section (or of one passage), as Saktumiva's matrix editor exports it for one alignment, for SplitsTree to
+  compute a tree or network from. SplitsTree's result, saved as NeXML and put in the teiHeader, is what the Stemma
+  button draws. Choose the witnesses (the edition is left out unless ticked), first hand or corrected text for
+  witnesses with `<add>`/`<del>` (Kac or Kpc), and as in Saktumiva: normalize spellings, merge word groups (one
+  character per apparatus entry), gaps significant. The alignments are brought up to date first, as Publish does,
+  or the saved alignment files are used as they are (fast). Each character is named after its passage (e.g.
+  `SS.1.1.3.2`), the readings are given in Harvard-Kyoto, and a comment at the top records the choices made.
+  Unlike Saktumiva, lost text (‡) is written as missing (?), not as a reading of its own.
+
 ## 0.4.3
 
 * **Stemma** (top bar): if the edition's teiHeader has a `<stemma format="nexml">` (in `<xenoData>`, as SplitsTree6 and

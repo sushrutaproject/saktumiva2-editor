@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<teiCorpus xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader><fileDesc><titleStmt><title>Made-up alignment for nexus.test.mjs</title></titleStmt><publicationStmt><p/></publicationStmt><sourceDesc><p/></sourceDesc></fileDesc></teiHeader>
+  <TEI n="X"><teiHeader/><text><cl><w n="0" lemma="atha">atha </w><w n="1">vā</w></cl><cl><w n="2">rāma's</w></cl><cl><w n="3">a</w><w n="4">b</w><w n="5">c</w><w n="6">d</w><w n="7">e</w><w n="8">f</w><w n="9">g</w><w n="10">h</w></cl><w n="11">‡</w></text></TEI>
+  <TEI n="Y"><teiHeader/><text><cl><w n="0" lemma="atha">athā </w><w n="1">vā</w></cl><cl><w n="2">rāmaḥ</w></cl><cl><w n="3"/><w n="4"/><w n="5"/><w n="6"/><w n="7"/><w n="8"/><w n="9"/><w n="10"/></cl><w n="11">x</w></text></TEI>
+  <TEI n="Z"><teiHeader/><text><cl><w n="0">atha </w><w n="1"/></cl><cl><w n="2">Rāma</w></cl><cl><w n="3">a</w><w n="4">b</w><w n="5">c</w><w n="6">d</w><w n="7">e</w><w n="8">f</w><w n="9">g</w><w n="10">h</w></cl><w n="11">‡</w></text></TEI>
+</teiCorpus>

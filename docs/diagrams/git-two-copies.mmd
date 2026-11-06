@@ -1,0 +1,13 @@
+flowchart LR
+    subgraph PC["Your computer"]
+        W["Working folder<br/>(your files)"]
+        L["Local git history"]
+    end
+    subgraph GH["GitHub"]
+        R["Repository<br/>(the online copy)"]
+        P["GitHub Pages<br/>(the website)"]
+    end
+    W -- "commit<br/>(the editor does this on every Save)" --> L
+    L -- "push" --> R
+    R -- "pull" --> L
+    R --> P

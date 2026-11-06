@@ -1,0 +1,9 @@
+flowchart TD
+    Pull["git pull<br/>(start of the day)"] --> Edit
+    Edit["Edit<br/>in the editor"] --> Save["Save<br/>Ctrl+S<br/>(a git commit)"]
+    Save --> Edit
+    Save --> Pub["Publish<br/>(a git commit)"]
+    Pub --> Check["Check the<br/>published file"]
+    Check -->|"something wrong"| Edit
+    Check -->|"all good"| Push["git push"]
+    Push --> Web["The website<br/>updates"]

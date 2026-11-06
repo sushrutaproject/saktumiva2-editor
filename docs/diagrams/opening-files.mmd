@@ -1,0 +1,8 @@
+flowchart TD
+    S["Start saktumiva-editor"] --> C["Project chooser"]
+    C -->|"a recently opened section"| E
+    C -->|"choose your repository"| L["List of its sections<br/>(chapter1, chapter2 …)"]
+    L -->|"a section opened for the first time"| U["Setup screen<br/>proposes the edition file and the witnesses"]
+    U -->|"check, then confirm<br/>(writes editor.config.json)"| E["The editing screen"]
+    L -->|"a section already set up"| E
+    E -->|"Projects button"| C

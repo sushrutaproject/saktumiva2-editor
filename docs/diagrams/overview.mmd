@@ -1,0 +1,8 @@
+flowchart TD
+    A["Manuscripts<br/>(images)"] -->|transcribe| B["Witness files<br/>TEI XML"]
+    B --> C["Provisional edition<br/>…_new.xml"]
+    B & C --> D["Saktumiva editor<br/>on your computer"]
+    D -->|Save| C
+    D -->|Publish| E["Published edition<br/>…xml with apparatus"]
+    E -->|git push| F["GitHub repository"]
+    F -->|GitHub Pages| G["Edition on the web"]

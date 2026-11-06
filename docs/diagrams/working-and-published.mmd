@@ -1,0 +1,5 @@
+flowchart LR
+    N["provisional-edition_sarirasthana_new.xml<br/>the working file<br/>your text and notes, no apparatus<br/>you edit this"]
+    P["provisional-edition_sarirasthana.xml<br/>the published file<br/>your text + the full apparatus<br/>never edit this"]
+    N -- "Publish (in the editor)" --> P
+    P -- "git push" --> W["the website"]

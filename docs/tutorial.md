@@ -22,16 +22,7 @@ Short videos for each part are planned; their scripts are in [video-scripts.md](
 
 The whole journey at a glance:
 
-```mermaid
-flowchart LR
-    A["Manuscripts<br/>(images)"] -->|transcribe| B["Witness files<br/>TEI XML"]
-    B --> C["Provisional edition<br/>…_new.xml"]
-    B & C --> D["Saktumiva editor<br/>on your computer"]
-    D -->|Save| C
-    D -->|Publish| E["Published edition<br/>…xml with apparatus"]
-    E -->|git push| F["GitHub repository"]
-    F -->|GitHub Pages| G["Edition on the web"]
-```
+![From manuscripts to an edition on the web](img/overview.svg)
 
 ---
 
@@ -111,7 +102,7 @@ exceptions given in the conventions). The Saktumiva website lists the tags for t
 | `<unclear>` | text you can read only doubtfully | `svarūpānyathā<unclear>t tānāpapaptiḥ</unclear>` |
 | `<supplied>` | text you have supplied | `ta<supplied>d</supplied> dravyam` |
 | `<space/>` | a blank in the manuscript | `<space unit="akṣara" quantity="2"/>` |
-| `<note>` | a note in the manuscript (or by you) | `<note place="inline">(pa॰ 1|1|16)</note>` |
+| `<note>` | a note in the manuscript (or by you) | `<note place="inline">(pa॰ 1\|1\|16)</note>` |
 
 The others (`<hi>`, `<metamark>`, `<milestone>`, `<pc>`, `<retrace>`, `<surplus>`) are on the
 [TEI tagging](https://saktumiva.org/wiki/tei) page.
@@ -144,21 +135,7 @@ get a complete history of every change, a backup, and an easy way to work with c
 
 There are two copies of your work, and **git** keeps them in step:
 
-```mermaid
-flowchart LR
-    subgraph PC["Your computer"]
-        W["Working folder<br/>(your files)"]
-        L["Local git history"]
-    end
-    subgraph GH["GitHub"]
-        R["Repository<br/>(the online copy)"]
-        P["GitHub Pages<br/>(the website)"]
-    end
-    W -- "commit<br/>(the editor does this on every Save)" --> L
-    L -- "push" --> R
-    R -- "pull" --> L
-    R --> P
-```
+![The two copies of your work: your computer and GitHub](img/git-two-copies.svg)
 
 * A **commit** is a saved version in your local history. The Saktumiva editor makes one for you every time you
   save or publish, so you rarely need to do this yourself.
@@ -281,13 +258,7 @@ date as you edit.
 
 Each section has two edition files with almost the same name. It matters which is which:
 
-```mermaid
-flowchart LR
-    N["provisional-edition_sarirasthana_new.xml<br/><b>the working file</b><br/>your text and notes, no apparatus<br/>you edit this"]
-    P["provisional-edition_sarirasthana.xml<br/><b>the published file</b><br/>your text + the full apparatus<br/>never edit this"]
-    N -- "Publish (in the editor)" --> P
-    P -- "git push" --> W["the website"]
-```
+![The working file and the published file](img/working-and-published.svg)
 
 * **`…_new.xml`, the working file.** This is the master copy of your edition: the text and your notes, and nothing
   else. Every **Save** in the editor writes to it. You may also open it in another XML editor (Oxygen, VS Code …).
@@ -384,16 +355,7 @@ Start the editor. The first screen is the **project chooser**:
 * Otherwise, under **Open a folder**, type the path of your repository's folder, or press **Browse…**, find the
   folder and press **Use this folder**.
 
-```mermaid
-flowchart TD
-    S["Start saktumiva-editor"] --> C["Project chooser"]
-    C -->|"a recently opened section"| E
-    C -->|"choose your repository"| L["List of its sections<br/>(chapter1, chapter2 …)"]
-    L -->|"a section opened for the first time"| U["Setup screen<br/>proposes the edition file and the witnesses"]
-    U -->|"check, then confirm<br/>(writes editor.config.json)"| E["The editing screen"]
-    L -->|"a section already set up"| E
-    E -->|"Projects button"| C
-```
+![From starting the editor to the editing screen](img/opening-files.svg)
 
 The chooser lists the sections it finds in the project. The first time you open a section, the **setup screen**
 shows what the editor proposes:
@@ -460,17 +422,7 @@ drawing. Making a stemma is beyond this tutorial: see Charles Li's guide, listed
 
 ## 8. The work cycle: edit, save, publish, push
 
-```mermaid
-flowchart LR
-    Pull["git pull<br/>(start of the day)"] --> Edit
-    Edit["Edit<br/>in the editor"] --> Save["Save<br/>Ctrl+S<br/>(a git commit)"]
-    Save --> Edit
-    Save --> Pub["Publish<br/>(a git commit)"]
-    Pub --> Check["Check the<br/>published file"]
-    Check -->|"something wrong"| Edit
-    Check -->|"all good"| Push["git push"]
-    Push --> Web["The website<br/>updates"]
-```
+![The work cycle: pull, edit, save, publish, check, push](img/work-cycle.svg)
 
 ### Edit
 

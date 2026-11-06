@@ -18,6 +18,12 @@
   <button id="btn-publish" title="Write the edition with the full apparatus to a separate file">Publish</button>
   <button id="btn-history" title="Saved versions (git)">History</button>
   <button id="btn-stemma" title="The stemma in the edition’s teiHeader" hidden>Stemma</button>
+  <div class="menu" id="export-menu">
+    <button id="btn-export-menu" aria-haspopup="true" aria-expanded="false" title="Export data from this section">Data export ▾</button>
+    <div class="menu-items" role="menu" hidden>
+      <button role="menuitem" id="btn-export-nexus">NEXUS for SplitsTree…</button>
+    </div>
+  </div>
   <button id="btn-info" title="Files and collation settings">Settings</button>
   <button id="btn-projects" title="Open another project or section">Projects</button>
   <div class="menu" id="help-menu">
@@ -144,6 +150,34 @@
     <button id="btn-pub-cancel">Cancel</button>
     <button id="btn-pub-start" class="primary">Publish</button>
     <button id="btn-pub-close" class="primary" hidden>Close</button>
+  </div>
+</dialog>
+
+<dialog id="nexus-dialog">
+  <h3>NEXUS for SplitsTree</h3>
+  <p class="muted">A character matrix of the aligned readings, as Saktumiva’s matrix editor exports it, for the whole section: open the file in SplitsTree (File → Open) to compute a tree or network. SplitsTree can save the result as NeXML, which goes into the edition’s teiHeader as <code>&lt;xenoData&gt;&lt;stemma format="nexml"&gt;</code> and is then shown by the Stemma button.</p>
+  <div id="nexus-form">
+    <h4>Passages</h4>
+    <label class="chk"><input type="radio" name="nexus-scope" value="all" checked> <span id="nexus-all-label">All passages</span></label>
+    <label class="chk"><input type="radio" name="nexus-scope" value="current"> <span id="nexus-current-label">This passage</span></label>
+    <h4>Alignments</h4>
+    <label class="chk"><input type="radio" name="nexus-source" value="current" checked> Up to date with the texts: passages whose alignment is missing or out of date are collated first (slow the first time, as with Publish)</label>
+    <label class="chk"><input type="radio" name="nexus-source" value="files"> <span id="nexus-files-label">The saved alignment files as they are</span> (fast; passages without a file are left out)</label>
+    <h4>Witnesses</h4>
+    <div id="nexus-wits" class="cols"></div>
+    <h4>Witnesses with corrections (&lt;add&gt;, &lt;del&gt;)</h4>
+    <label class="chk"><input type="radio" name="nexus-corr" value="ac" checked> Ante correctionem: the first hand (e.g. Kac)</label>
+    <label class="chk"><input type="radio" name="nexus-corr" value="pc"> Post correctionem: the corrected text (e.g. Kpc)</label>
+    <h4>Characters</h4>
+    <label class="chk" title="Use the collation’s normalized forms (the settings’ filters), so that orthographic differences are not counted"><input type="checkbox" id="nexus-normalize"> Normalize spellings</label>
+    <label class="chk" title="One character per word group of the alignment (an apparatus entry), not one per aligned syllable"><input type="checkbox" id="nexus-merge"> Merge groups</label>
+    <label class="chk" title="An omission counts as a reading of its own; otherwise it is a gap"><input type="checkbox" id="nexus-gaps"> Gaps are significant</label>
+  </div>
+  <progress id="nexus-progress" value="0" max="1" hidden></progress>
+  <p id="nexus-status"></p>
+  <div class="dialog-buttons"><span class="spacer"></span>
+    <button id="btn-nexus-cancel">Cancel</button>
+    <button id="btn-nexus-go" class="primary">Export</button>
   </div>
 </dialog>
 

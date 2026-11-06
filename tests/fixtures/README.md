@@ -17,3 +17,5 @@ Sources:
   The TEI files have the extension `.txt`, and there are no alignment files, so everything is collated afresh.
 
 `stemma/` holds small TEI files for the Stemma view's tests (`tests/js/stemma.test.mjs`); see its README.
+
+`nexus/` holds alignments for the NEXUS export's tests (`tests/js/nexus.test.mjs`); see its README.

@@ -93,3 +93,5 @@ def test_preferences():
     assert project.prefs() == {'witnessOrder': ['K', 'N', 'H', 'A']}
     project.set_prefs({'stemma': {'proportional': False, 'lines': 'square'}})
     assert project.prefs()['stemma'] == {'proportional': False, 'lines': 'square'}
+    project.set_prefs({'nexus': {'normalize': True, 'mergeGroups': False, 'gapsSignificant': False, 'corrections': 'pc'}})
+    assert project.prefs()['nexus']['corrections'] == 'pc'

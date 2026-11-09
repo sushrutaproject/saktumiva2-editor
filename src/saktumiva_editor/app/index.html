@@ -40,6 +40,10 @@
 <main id="layout">
   <nav id="passages">
     <input id="filter" type="search" placeholder="Find passage or words…" autocomplete="off">
+    <div class="list-tools">
+      <button id="btn-several" aria-pressed="false" title="Show several passages together: tick them, Shift-click a range, or Ctrl-click (Cmd-click) one at a time">Show several</button>
+      <span id="sel-count" class="muted"></span>
+    </div>
     <div id="passage-list" role="listbox" aria-label="Passages"></div>
   </nav>
 
@@ -55,6 +59,10 @@
         <button id="btn-text-smaller" title="Smaller text (Ctrl+−)">A−</button>
         <button id="btn-text-reset" title="Normal text size">A</button>
         <button id="btn-text-larger" title="Larger text (Ctrl++)">A+</button>
+      </div>
+      <div class="tools" id="multi-tools" hidden>
+        <span class="muted">To edit, click a passage’s id</span>
+        <button id="btn-single" title="Show only one passage again, with all the editing tools (Esc)">Show one passage</button>
       </div>
       <div class="tools" id="reading-tools">
         <button id="btn-edit" title="Edit the text of this passage (E)">Edit text</button>
@@ -105,7 +113,7 @@
 
   <aside id="right">
     <div class="panel">
-      <div class="panel-head"><h2>Witnesses</h2><span class="muted">this passage</span></div>
+      <div class="panel-head"><h2>Witnesses</h2><span class="muted" id="wit-scope">this passage</span></div>
       <div id="witnesses"></div>
     </div>
     <div class="panel" id="image-panel" hidden>

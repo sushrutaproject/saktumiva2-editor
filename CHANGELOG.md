@@ -1,7 +1,20 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (9 November 2026)
 
+* **Several passages at once.** Shift-click in the passage list shows the range from the passage clicked last;
+  Ctrl-click (⌘-click) adds or removes one; **Show several** above the list gives each passage a tick box. The centre
+  panel shows them in document order as continuous text, each under its `xml:id`, with the combined apparatus
+  grouped under each passage (use/omit, minor readings, long omissions, one legend of sigla), the notes grouped
+  the same way, and in the Witnesses panel each witness's text of every passage. Passages that need collating are
+  collated in the background in document order, each heading showing its progress ("waiting", "collating… 40%"),
+  and each appears as soon as it is ready. use/omit and editing a note work here, recorded against their passage,
+  with unsaved markers, undo and Save as usual. Edit text, TEI source, Add note, Correct alignment and a witness's
+  edit work on one passage: click a passage's id to open it alone, or press **Show one passage** (or Esc).
+  A plain click still shows one passage. The choice is remembered for the browser session. While several are
+  shown, the NEXUS export's "This passage only" becomes "The passages shown".
+* Browser tests (Playwright) for choosing several passages, the combined apparatus and going back to one passage,
+  run by CI.
 * **Data export** menu (top bar), with **NEXUS for SplitsTree…**: a character matrix of the aligned readings of the
   whole section (or of one passage), as Saktumiva's matrix editor exports it for one alignment, for SplitsTree to
   compute a tree or network from. SplitsTree's result, saved as NeXML and put in the teiHeader, is what the Stemma

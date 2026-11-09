@@ -6,6 +6,7 @@ import saktumivaIgnoreTags from './saktumiva/lib/tagfilters.mjs';
 import { setupMenu, checkForUpdates, showAbout } from './common.mjs';
 import { findStemmata, layoutTree, renderSVG, sigla as stemmaSigla } from './stemma.mjs';
 import { buildNexus } from './nexus.mjs';
+import { clickSelect, sortByDoc, selectionLabel, encodeSession, decodeSession } from './multi.mjs';
 
 // ================================================================ helpers
 const $ = (s, r = document) => r.querySelector(s);
@@ -48,6 +49,7 @@ const S = {
   origDoc: null, doc: null, span: null, byId: new Map(), origById: new Map(), blocks: [], chapter: new Map(),
   witnesses: [], badFiles: [], collator: null, settingsSource: '',
   current: null, mode: 'read',
+  selection: [], anchor: null, several: false,   // several passages shown at once (selection.length > 1)
   undo: [], redo: [], log: [],
   results: new Map(),    // passage id -> {hash, res}
   alignFile: new Map(), forceFresh: new Set(), inflight: new Map(), pendingAlign: new Set(),
@@ -124,9 +126,13 @@ async function load() {
   $('#note-types').replaceChildren(...[...S.noteTypes].sort().map(t => h('option', {value: t})));
 
   rememberOriginal();
-  renderList();
   const last = store.get(S.editionFile + ':current');
-  openPassage(S.byId.has(last) ? last : S.blocks[0]);
+  const sess = decodeSession(sessionGet(), S.blocks);
+  S.several = sess.several;
+  renderList();
+  const first = S.byId.has(last) ? last : S.blocks[0];
+  if (sess.several && sess.selection.length > 1) showSeveral(sess.selection, sess.selection.includes(first) ? first : sess.selection[0]);
+  else openPassage(first);
   updateStatus();
   if (S.badFiles.length) toast(`Some files could not be read: ${S.badFiles.map(b => b.file).join(', ')}. See Settings.`, true, 9000);
 }
@@ -191,22 +197,108 @@ function renderList() {
     if (q && !id.toLowerCase().includes(q) && !el.textContent.replace(/\s+/g, ' ').toLowerCase().includes(q)) continue;
     const ch = S.chapter.get(id);
     if (ch !== lastCh) { frag.append(h('div', {class: 'chapter'}, ch || '—')); lastCh = ch; }
-    frag.append(h('div', {class: 'pitem' + (id === S.current ? ' current' : ''), 'data-id': id, role: 'option',
-                          onclick: () => openPassage(id)},
+    const sel = isMulti() && S.selection.includes(id);
+    frag.append(h('div', {class: 'pitem' + (id === S.current ? ' current' : '') + (sel ? ' selected' : ''), 'data-id': id, role: 'option',
+                          'aria-selected': String(sel || id === S.current), onclick: e => listClick(e, id)},
+      h('input', {type: 'checkbox', class: 'pcheck', tabindex: '-1', 'aria-label': `Show ${id} with the others`, checked: sel || (S.several && id === S.current),
+                  title: 'Show this passage together with the others (or Ctrl-click / Cmd-click the passage)'}),
       h('span', {class: 'pid'}, shortId(id)), h('span', {class: 'pwords'}, words),
       h('span', {class: 'mark' + (dirty.has(id) ? ' dirty' : ''), title: 'unsaved changes'})));
   }
   box.replaceChildren(frag);
+  box.classList.toggle('several', S.several);
   box.querySelector('.current')?.scrollIntoView({block: 'nearest'});
+  updateSeveralButton();
 }
 function markList() {
   const dirty = computeDirty();
+  const multi = isMulti();
   for (const it of document.querySelectorAll('.pitem')) {
     const id = it.dataset.id;
+    const sel = multi && S.selection.includes(id);
     it.classList.toggle('current', id === S.current);
+    it.classList.toggle('selected', sel);
+    it.setAttribute('aria-selected', String(sel || id === S.current));
+    it.querySelector('.pcheck').checked = sel || (S.several && id === S.current);
     it.querySelector('.mark').classList.toggle('dirty', dirty.has(id));
   }
+  $('#passage-list').classList.toggle('several', S.several);
+  for (const m of document.querySelectorAll('#passage .mhead .mark, #apparatus .ghead .mark')) m.classList.toggle('dirty', dirty.has(m.dataset.id));
+  updateSeveralButton();
 }
+
+// ================================================================ several passages at once
+// A plain click shows one passage; Shift-click a range, Ctrl/Cmd-click (or the tick box, with "Show several" on)
+// adds or removes one. Editing works on one passage at a time: click a passage's heading to open it alone.
+const isMulti = () => S.selection.length > 1;
+const sessionKey = () => 'sktedit:' + S.editionFile + ':several';
+function sessionGet() { try { return sessionStorage.getItem(sessionKey()); } catch { return null; } }
+function rememberSelection() {
+  try { sessionStorage.setItem(sessionKey(), encodeSession({several: S.several, selection: isMulti() ? S.selection : []})); } catch { /* ignore */ }
+}
+function updateSeveralButton() {
+  const b = $('#btn-several');
+  b.setAttribute('aria-pressed', String(S.several));
+  b.textContent = S.several ? 'Show several ✓' : 'Show several';
+  $('#sel-count').textContent = isMulti() ? `${S.selection.length} shown` : S.several ? 'tick passages, or Shift-click' : '';
+}
+function listClick(e, id) {
+  if (S.mode !== 'read') { e.preventDefault(); toast('Finish or cancel the current edit first.', true); markList(); return; }
+  const onBox = e.target.classList?.contains('pcheck');
+  const toggle = e.ctrlKey || e.metaKey || onBox;
+  const shift = e.shiftKey;
+  if (!toggle && !shift) { openPassage(id); return; }
+  if (shift) window.getSelection()?.removeAllRanges();   // Shift-click selects text in the list otherwise
+  const order = [...document.querySelectorAll('#passage-list .pitem')].map(x => x.dataset.id);
+  const r = clickSelect({selection: S.selection.length ? S.selection : [S.current], anchor: S.anchor ?? S.current,
+                         order, all: S.blocks, id, shift, toggle});
+  if (!S.several) { S.several = true; }
+  S.anchor = r.anchor;
+  if (r.selection.length < 2) openPassage(r.selection[0], {keepAnchor: true});
+  else showSeveral(r.selection, r.focus, {keepScroll: true, keepAnchor: true});
+}
+function setSeveral(on) {
+  if (S.mode !== 'read') { toast('Finish or cancel the current edit first.', true); return; }
+  S.several = on;
+  if (!on && isMulti()) openPassage(S.current);
+  else { rememberSelection(); markList(); }
+}
+// the controls above the text: the editing tools for one passage, or the way back to one passage
+function setMultiUI(multi) {
+  $('#centre').classList.toggle('multi', multi);
+  $('#reading-tools').hidden = multi;
+  $('#multi-tools').hidden = !multi;
+  $('#wit-scope').textContent = multi ? 'these passages' : 'this passage';
+  $('#btn-prev').hidden = multi; $('#btn-next').hidden = multi;
+  $('#btn-align').hidden = multi;
+}
+function showSeveral(ids, focus, opts = {}) {
+  if (S.mode !== 'read') { toast('Finish or cancel the current edit first.', true); return; }
+  ids = sortByDoc(ids.filter(id => S.byId.has(id)), S.blocks);
+  if (ids.length < 2) { openPassage(ids[0] || focus); return; }
+  dropBatch();
+  S.selection = ids;
+  S.current = ids.includes(focus) ? focus : ids[0];
+  if (!opts.keepAnchor) S.anchor = S.current;
+  store.set(S.editionFile + ':current', S.current);
+  rememberSelection();
+  setMultiUI(true);
+  $('#passage-id').textContent = selectionLabel(ids, S.blocks);
+  $('#passage-chapter').textContent = `${ids.length} passages`;
+  focused = null;
+  S.appRanges = [];
+  renderPassage(); renderNotes(); renderWitnesses();
+  renderApparatusGroups();
+  collateMulti();
+  markList(); updateStatus();
+  if (!opts.keepScroll) document.querySelector(`.pitem[data-id="${CSS.escape(S.current)}"]`)?.scrollIntoView({block: 'nearest'});
+}
+// re-show whatever is shown now (after a save, undo …)
+function refreshView() {
+  if (isMulti() && S.selection.every(id => S.byId.has(id))) showSeveral(S.selection, S.current, {keepScroll: true, keepAnchor: true});
+  else openPassage(S.byId.has(S.current) ? S.current : S.blocks[0], {keepScroll: true});
+}
+const needOne = () => { toast('This works on one passage at a time: click a passage’s heading (its id) to open it alone.', false, 5000); };
 
 // ================================================================ dirty tracking
 let origSer = new Map(), origNotes = new Map();
@@ -238,24 +330,27 @@ function updateStatus() {
   else { st.textContent = S.gitOn ? 'All saved' : 'All saved (no git)'; st.className = 'status saved'; }
   $('#btn-save').disabled = n === 0 || S.mode !== 'read';
   $('#btn-publish').disabled = S.mode !== 'read' && S.mode !== 'publish';
-  $('#btn-align').disabled = S.mode !== 'read' || !S.results.get(S.current)?.res.alignXML;
+  $('#btn-align').disabled = S.mode !== 'read' || isMulti() || !S.results.get(S.current)?.res.alignXML;
   $('#btn-undo').disabled = !S.undo.length || S.mode !== 'read';
   $('#btn-redo').disabled = !S.redo.length || S.mode !== 'read';
 }
 
 // ================================================================ undo
 function snapshot(label) {
-  S.undo.push({doc: S.doc.cloneNode(true), current: S.current, log: [...S.log]});
+  S.undo.push({doc: S.doc.cloneNode(true), current: S.current, selection: [...S.selection], log: [...S.log]});
   if (S.undo.length > 100) S.undo.shift();
   S.redo = [];
   S.log.push(label);
 }
 function swapDoc(entry, toStack) {
-  toStack.push({doc: S.doc.cloneNode(true), current: S.current, log: [...S.log]});
+  toStack.push({doc: S.doc.cloneNode(true), current: S.current, selection: [...S.selection], log: [...S.log]});
   S.doc = entry.doc; S.log = entry.log;
   S.collator.setEdition(S.doc);
   reindex();
-  openPassage(S.byId.has(entry.current) ? entry.current : S.current, {keepScroll: true});
+  // back to the view in which the change was made: one passage, or the same several
+  const sel = (entry.selection || []).filter(id => S.byId.has(id));
+  if (sel.length > 1) showSeveral(sel, entry.current, {keepScroll: true});
+  else openPassage(S.byId.has(entry.current) ? entry.current : S.current, {keepScroll: true});
   markList(); updateStatus();
 }
 const doUndo = () => { if (S.undo.length && S.mode === 'read') { swapDoc(S.undo.pop(), S.redo); toast('Undone.'); } };
@@ -263,6 +358,11 @@ const doRedo = () => { if (S.redo.length && S.mode === 'read') { swapDoc(S.redo.
 
 function changed(id) {
   S.collator.setEdition(S.doc); // the edition element objects are live, but refresh the text map
+  if (isMulti()) {
+    S.appRanges = S.appRanges.filter(a => a.pid !== id);   // its apparatus is out of date until collated again
+    renderPassage(); renderNotes(); collateMulti(); markList(); updateStatus();
+    return;
+  }
   $('#collate-status').textContent = 'collating…';
   renderPassage(); collateCurrent(); renderNotes(); markList(); updateStatus();
 }
@@ -309,11 +409,28 @@ const anchorLabelsFor = el => {
   return m;
 };
 
+// a passage's heading in the several-passages view: its id (click: open it alone), status and unsaved mark
+function passageHeading(id, cls) {
+  return h('div', {class: cls, 'data-id': id},
+    h('button', {class: 'mopen', title: `Open ${id} alone, to edit it, its notes or its alignment`, onclick: () => openPassage(id)}, id),
+    h('span', {class: 'mstatus muted', 'data-id': id}, multiStatus.get(id) || ''),
+    h('span', {class: 'mark', 'data-id': id, title: 'unsaved changes'}));
+}
 function renderPassage() {
-  const el = S.byId.get(S.current);
   const box = $('#passage');
   box.classList.remove('editing');
   S.t2h = new Map(); S.h2t = new Map();
+  if (isMulti()) {
+    box.replaceChildren(...S.selection.map(id => {
+      const el = S.byId.get(id);
+      return h('section', {class: 'mpass', 'data-id': id}, passageHeading(id, 'mhead'),
+        !el ? h('p', {class: 'muted'}, 'Passage not found.')
+          : el.textContent.trim() ? renderTEI(el, anchorLabelsFor(el)) : h('p', {class: 'muted empty'}, '(no text)'));
+    }));
+    paintHighlights();
+    return;
+  }
+  const el = S.byId.get(S.current);
   if (!el) { box.replaceChildren(h('p', {class: 'muted'}, 'Passage not found.')); return; }
   box.replaceChildren(renderTEI(el, anchorLabelsFor(el)));
   paintHighlights();
@@ -322,7 +439,12 @@ function renderPassage() {
 function openPassage(id, opts = {}) {
   if (!id) return;
   if (S.mode !== 'read') { toast('Finish or cancel the current edit first.', true); return; }
+  if (isMulti()) dropBatch();
   S.current = id;
+  S.selection = [id];
+  if (!opts.keepAnchor) S.anchor = id;
+  rememberSelection();
+  setMultiUI(false);
   store.set(S.editionFile + ':current', id);
   $('#passage-id').textContent = id;
   $('#passage-chapter').textContent = S.chapter.get(id) || '';
@@ -335,7 +457,7 @@ function openPassage(id, opts = {}) {
   markList();
   if (!opts.keepScroll) document.querySelector(`.pitem[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({block: 'nearest'});
 }
-const go = d => { const i = S.blocks.indexOf(S.current) + d; if (i >= 0 && i < S.blocks.length) openPassage(S.blocks[i]); };
+const go = d => { if (isMulti()) return; const i = S.blocks.indexOf(S.current) + d; if (i >= 0 && i < S.blocks.length) openPassage(S.blocks[i]); };
 
 // ================================================================ collation + apparatus
 // Order of preference: this session's results, the editor's own cache, an existing
@@ -354,7 +476,8 @@ async function getResult(id, {priority = 'high', onProgress} = {}) {
   const key = await cacheKey(ser, id);
   // share one computation between simultaneous requests for the same passage text
   const inflight = S.inflight.get(key);
-  if (inflight && (priority === 'low' || inflight.priority === 'high')) return inflight.promise;
+  const RANK = {low: 0, batch: 1, high: 1};   // a batch job still running when its passage is opened alone is reused
+  if (inflight && RANK[inflight.priority] >= RANK[priority]) return inflight.promise;
   const promise = computeResult(id, ser, key, {priority, onProgress});
   S.inflight.set(key, {priority, promise});
   try { return await promise; } finally { if (S.inflight.get(key)?.promise === promise) S.inflight.delete(key); }
@@ -424,12 +547,12 @@ function collateCurrent() {
     const ser = serializeEl(el);
     if (!(S.results.get(id)?.hash === ser)) $('#collate-status').textContent = 'collating…';
     try {
-      const res = await getResult(id, {priority: 'high', onProgress: p => { if (S.current === id) $('#collate-status').textContent = `collating… ${Math.round(p * 100)}%`; }});
+      const res = await getResult(id, {priority: 'high', onProgress: p => { if (S.current === id && !isMulti()) $('#collate-status').textContent = `collating… ${Math.round(p * 100)}%`; }});
       if (!res) return;
-      if (S.current === id && serializeEl(S.byId.get(id)) === ser) { showApparatus(id, res); lookAhead(); }
+      if (S.current === id && !isMulti() && serializeEl(S.byId.get(id)) === ser) { showApparatus(id, res); lookAhead(); }
     } catch (e) {
       console.error(e);
-      if (S.current === id) { $('#collate-status').textContent = ''; $('#apparatus').replaceChildren(h('p', {class: 'error'}, 'Collation failed: ' + e.message)); }
+      if (S.current === id && !isMulti()) { $('#collate-status').textContent = ''; $('#apparatus').replaceChildren(h('p', {class: 'error'}, 'Collation failed: ' + e.message)); }
     }
   }, 120);
 }
@@ -464,45 +587,113 @@ async function flushAlignments() {
 const sigla = str => (str || '').split(/\s+/).filter(Boolean).map(s => s.replace(/^#/, '')).join(' ');
 const readingText = el => el.textContent.replace(/\s+/g, ' ').trim();
 
-function showApparatus(id, res) {
-  const box = $('#apparatus');
-  S.appRanges = [];
-  if (res.none) { box.replaceChildren(h('p', {class: 'muted'}, res.reason)); $('#collate-status').textContent = ''; $('#btn-align').disabled = true; paintHighlights(); return; }
-  if (res.error) { box.replaceChildren(h('p', {class: 'error'}, res.error)); $('#collate-status').textContent = ''; return; }
-  $('#collate-status').textContent = S.mode === 'align' ? 'following your corrections'
+// The apparatus of one passage: its entries, and the TEI ranges of their lemmata (for highlighting and "use")
+function apparatusContent(id, res) {
+  if (res.none) return {nodes: [h('p', {class: 'muted'}, res.reason)], status: '', ranges: [], legend: []};
+  if (res.error) return {nodes: [h('p', {class: 'error'}, res.error)], status: '', ranges: [], legend: []};
+  const status = S.mode === 'align' ? 'following your corrections'
     : res.source === 'collated' ? `collated in ${(res.ms / 1000).toFixed(1)} s`
     : res.source === 'file' ? (res.corrected ? 'from your corrected alignment' : 'from the existing alignment file') : 'collated (cached)';
-  $('#btn-align').disabled = !res.alignXML || S.mode !== 'read';
   const passageEl = S.byId.get(id);
   const ignore = new Set(S.collator.ignore);
-  const frag = document.createDocumentFragment();
+  const nodes = [], ranges = [];
   const apps = [...res.listApp.children].filter(a => a.localName === 'app');
   const omissions = [...res.listApp.children].filter(a => a.localName === 'listApp');
-  if (!apps.length) frag.append(h('p', {class: 'muted'}, 'No variants: all witnesses agree with the text.'));
+  if (!apps.length) nodes.push(h('p', {class: 'muted'}, 'No variants: all witnesses agree with the text.'));
   apps.forEach((app, i) => {
     const loc = (app.getAttribute('loc') || '0,0').split(',').map(Number);
     const r = rangeFromCoords(loc, passageEl, ignore);
     let range = null;
     if (r) { range = S.doc.createRange(); range.setStart(r.sNode, r.sOff); range.setEnd(r.eNode, r.eOff); }
-    S.appRanges.push({app, range, i});
-    frag.append(renderApp(app, i));
+    ranges.push({app, range, i, pid: id, key: appKey(id, i)});
+    nodes.push(renderApp(app, i, id));
   });
-  for (const om of omissions) for (const app of [...om.children]) frag.append(h('div', {class: 'app'}, h('span', {class: 'muted'}, 'Long omission: '),
+  for (const om of omissions) for (const app of [...om.children]) nodes.push(h('div', {class: 'app'}, h('span', {class: 'muted'}, 'Long omission: '),
      h('span', {class: 'lem'}, readingText(app.querySelector('lem'))), h('span', {class: 'bracket'}, ' ] om. '), h('span', {class: 'sig'}, sigla(app.querySelector('rdg')?.getAttribute('wit')))));
-  if (res.listWit) {
-    const wits = [...res.listWit.querySelectorAll(':scope > witness')].map(w => `${w.getAttribute('xml:id') || xmlid(w)} = ${w.querySelector('expan')?.textContent.trim() || ''}`);
-    frag.append(h('div', {class: 'legend'}, wits.join(' · ')));
-  }
-  if (res.warnings?.length) frag.append(h('p', {class: 'muted'}, 'Collation warnings: ' + res.warnings.join('; ')));
-  if (res.source === 'file' && res.corrected && res.compat && !res.compat.ok) frag.prepend(h('p', {class: 'muted'}, 'Your corrected alignment was made with other collation settings (' + res.compat.why.join('; ') + '). It is used as it is.'));
-  if (res.staleCorrected) frag.prepend(h('p', {class: 'error'}, 'Your corrected alignment for this passage no longer fits its text (the text or a witness has changed). This is a fresh collation; use “Correct alignment” to redo the corrections.'));
-  box.replaceChildren(frag);
+  const legend = res.listWit ? [...res.listWit.querySelectorAll(':scope > witness')].map(w => `${w.getAttribute('xml:id') || xmlid(w)} = ${w.querySelector('expan')?.textContent.trim() || ''}`) : [];
+  if (res.warnings?.length) nodes.push(h('p', {class: 'muted'}, 'Collation warnings: ' + res.warnings.join('; ')));
+  if (res.source === 'file' && res.corrected && res.compat && !res.compat.ok) nodes.unshift(h('p', {class: 'muted'}, 'Your corrected alignment was made with other collation settings (' + res.compat.why.join('; ') + '). It is used as it is.'));
+  if (res.staleCorrected) nodes.unshift(h('p', {class: 'error'}, 'Your corrected alignment for this passage no longer fits its text (the text or a witness has changed). This is a fresh collation; use “Correct alignment” to redo the corrections.'));
+  return {nodes, status, ranges, legend};
+}
+
+function showApparatus(id, res) {
+  const box = $('#apparatus');
+  const c = apparatusContent(id, res);
+  S.appRanges = c.ranges;
+  $('#collate-status').textContent = c.status;
+  $('#btn-align').disabled = !res.alignXML || S.mode !== 'read';
+  if (c.legend.length) c.nodes.push(h('div', {class: 'legend'}, c.legend.join(' · ')));
+  box.replaceChildren(...c.nodes);
   paintHighlights();
 }
 
-function renderApp(app, i) {
-  const div = h('div', {class: 'app', 'data-i': i,
-    onmouseenter: () => focusApp(i, false), onmouseleave: () => focusApp(null, false), onclick: () => focusApp(i, true)});
+// ---------------------------------------------------------------- the apparatus of several passages
+// One group per passage, in document order. Each group fills in when its passage is ready, so a
+// passage that has to be collated afresh does not hold up the others.
+const multiStatus = new Map();    // passage id -> what its heading says (waiting, collating 40%, collated …)
+const multiLegend = new Map();    // siglum -> "K = Kathmandu …", for all the passages shown
+let multiRun = 0;
+function setMultiStatus(id, text, cls = '') {
+  multiStatus.set(id, text);
+  for (const el of document.querySelectorAll(`.mstatus[data-id="${CSS.escape(id)}"]`)) { el.textContent = text; el.className = 'mstatus muted ' + cls; }
+}
+function renderApparatusGroups() {
+  multiLegend.clear();
+  $('#apparatus').replaceChildren(...S.selection.map(id => h('section', {class: 'appgroup', 'data-id': id},
+    passageHeading(id, 'ghead'), h('div', {class: 'gbody'}, h('p', {class: 'muted'}, '…')))), h('div', {class: 'legend', id: 'multi-legend'}));
+}
+function showApparatusGroup(id, res) {
+  const g = document.querySelector(`#apparatus .appgroup[data-id="${CSS.escape(id)}"] .gbody`);
+  if (!g) return;
+  const c = apparatusContent(id, res);
+  S.appRanges = [...S.appRanges.filter(a => a.pid !== id), ...c.ranges];
+  g.replaceChildren(...c.nodes);
+  setMultiStatus(id, c.status || (res.none ? 'not collated' : ''), 'ok');
+  for (const l of c.legend) multiLegend.set(l.split(' = ')[0], l);
+  const lg = $('#multi-legend');
+  if (lg) lg.textContent = [...multiLegend.values()].join(' · ');
+  paintHighlights();
+}
+function multiProgress() {
+  const n = S.selection.length, ready = S.selection.filter(id => S.results.get(id)?.hash === serializeEl(S.byId.get(id))).length;
+  $('#collate-status').textContent = ready === n ? `all ${n} passages ready` : `${ready} of ${n} passages ready`;
+}
+// collate the passages shown (those not ready yet), all at once: ready ones appear at once, the others as they finish
+function collateMulti() {
+  const run = ++multiRun;
+  const ids = [...S.selection];
+  for (const id of ids) {
+    const el = S.byId.get(id);
+    if (!el) continue;
+    const ser = serializeEl(el);
+    const mem = S.results.get(id);
+    if (mem && mem.hash === ser) { showApparatusGroup(id, mem.res); continue; }
+    setMultiStatus(id, 'waiting…', 'busy');
+    document.querySelector(`#apparatus .appgroup[data-id="${CSS.escape(id)}"] .gbody`)?.replaceChildren(h('p', {class: 'muted'}, 'Waiting for the collation of this passage…'));
+    getResult(id, {priority: 'batch', onProgress: p => { if (run === multiRun) setMultiStatus(id, `collating… ${Math.round(p * 100)}%`, 'busy'); }})
+      .then(res => {
+        if (run !== multiRun || !isMulti() || !S.selection.includes(id) || serializeEl(S.byId.get(id)) !== ser) return;
+        if (!res) { setMultiStatus(id, 'not collated', 'bad'); return; }
+        showApparatusGroup(id, res); multiProgress(); updateStatus();
+      })
+      .catch(e => {
+        console.error(e);
+        if (run !== multiRun) return;
+        setMultiStatus(id, 'collation failed', 'bad');
+        document.querySelector(`#apparatus .appgroup[data-id="${CSS.escape(id)}"] .gbody`)?.replaceChildren(h('p', {class: 'error'}, 'Collation failed: ' + e.message));
+      });
+  }
+  multiProgress();
+}
+// leaving the several-passages view: passages still waiting to be collated for it are dropped
+function dropBatch() { multiRun++; multiStatus.clear(); S.collator?.dropQueued('batch'); }
+
+const appKey = (pid, i) => `${pid}|${i}`;
+function renderApp(app, i, pid) {
+  const key = appKey(pid, i);
+  const div = h('div', {class: 'app', 'data-key': key,
+    onmouseenter: () => focusApp(key, false), onmouseleave: () => focusApp(null, false), onclick: () => focusApp(key, true)});
   const kids = [...app.children];
   const lemGrp = kids.find(k => k.localName === 'rdgGrp' && k.getAttribute('type') === 'lemma');
   const lem = lemGrp ? lemGrp.querySelector('lem') : kids.find(k => k.localName === 'lem');
@@ -513,34 +704,34 @@ function renderApp(app, i) {
   let first = true;
   for (const k of kids) {
     if (k === lemGrp || k.localName === 'lem') continue;
-    if (k.localName === 'rdg') { if (!first) div.append(h('span', {class: 'semi'}, ';')); div.append(renderRdg(k, k.getAttribute('wit'), i)); first = false; }
+    if (k.localName === 'rdg') { if (!first) div.append(h('span', {class: 'semi'}, ';')); div.append(renderRdg(k, k.getAttribute('wit'), i, false, pid)); first = false; }
     else if (k.localName === 'rdgGrp') {
       const main = k.querySelector('rdg[type="main"]') || k.querySelector('rdg');
       if (!first) div.append(h('span', {class: 'semi'}, ';'));
-      div.append(renderRdg(main, k.getAttribute('select'), i)); first = false;
+      div.append(renderRdg(main, k.getAttribute('select'), i, false, pid)); first = false;
       for (const r of k.querySelectorAll('rdg')) if (r !== main) minor.push(r);
     }
   }
-  if (minor.length && S.cfg.apparatus?.showMinor !== false) div.append(h('div', {class: 'minor'}, 'minor: ', ...minor.map(r => renderRdg(r, r.getAttribute('wit'), i, true))));
+  if (minor.length && S.cfg.apparatus?.showMinor !== false) div.append(h('div', {class: 'minor'}, 'minor: ', ...minor.map(r => renderRdg(r, r.getAttribute('wit'), i, true, pid))));
   return div;
 }
 
-function renderRdg(rdg, wits, appIndex, small = false) {
+function renderRdg(rdg, wits, appIndex, small = false, pid = S.current) {
   const txt = readingText(rdg);
   const span = h('span', {class: 'rdg', title: 'Witnesses: ' + sigla(wits)},
     txt ? txt : h('span', {class: 'om'}, 'om.'), ' ', h('span', {class: 'sig'}, sigla(wits)));
   if (S.mode === 'read') span.append(h('button', {class: 'use', title: txt ? 'Put this reading in the text' : 'Remove the lemma from the text (follow the omission)',
-    onclick: e => { e.stopPropagation(); acceptReading(appIndex, rdg, sigla(wits)); }}, txt ? 'use' : 'omit'));
+    onclick: e => { e.stopPropagation(); acceptReading(pid, appIndex, rdg, sigla(wits)); }}, txt ? 'use' : 'omit'));
   span.addEventListener('mouseenter', () => highlightWits(sigla(wits)));
   span.addEventListener('mouseleave', () => highlightWits(''));
   return span;
 }
 
 let focused = null;
-function focusApp(i, sticky) {
-  if (sticky) focused = (focused === i ? null : i);
-  const show = i ?? focused;
-  for (const d of document.querySelectorAll('.app')) d.classList.toggle('focus', Number(d.dataset.i) === focused);
+function focusApp(key, sticky) {
+  if (sticky) focused = (focused === key ? null : key);
+  const show = key ?? focused;
+  for (const d of document.querySelectorAll('.app')) d.classList.toggle('focus', d.dataset.key === focused);
   paintHighlights(show);
 }
 
@@ -555,9 +746,9 @@ function toHtmlRange(r) {
 function paintHighlights(focusIndex = focused) {
   if (!window.CSS || !CSS.highlights || !['read', 'align'].includes(S.mode)) return;
   const all = [], foc = [];
-  for (const {range, i} of S.appRanges) {
+  for (const {range, key} of S.appRanges) {
     const hr = toHtmlRange(range); if (!hr) continue;
-    all.push(hr); if (i === focusIndex) foc.push(hr);
+    all.push(hr); if (key === focusIndex) foc.push(hr);
   }
   CSS.highlights.set('lemma', new Highlight(...all));
   CSS.highlights.set('lemma-focus', new Highlight(...foc));
@@ -571,6 +762,7 @@ function highlightWits(sig) {
 // clicking on a word in the text focuses its apparatus entry
 $('#passage').addEventListener('click', e => {
   if (S.mode !== 'read') return;
+  if (e.target.closest('.mhead')) return;
   const a = e.target.closest('.chip.anchor');
   if (a) { focusNote(a.dataset.anchor); return; }
   if (!window.getSelection().isCollapsed) return;
@@ -581,8 +773,8 @@ $('#passage').addEventListener('click', e => {
   if (!tn) return;
   const hit = S.appRanges.find(({range}) => range && range.isPointInRange(tn, Math.min(off, tn.data.length)));
   if (hit) {
-    focusApp(hit.i, true);
-    document.querySelector(`.app[data-i="${hit.i}"]`)?.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+    focusApp(hit.key, true);
+    document.querySelector(`.app[data-key="${CSS.escape(hit.key)}"]`)?.scrollIntoView({block: 'nearest', behavior: 'smooth'});
   }
 });
 
@@ -602,14 +794,14 @@ function readingFragment(rdg) {
 }
 
 const KEEP_IN_LEMMA = new Set(['anchor', 'caesura', 'pb', 'lb', 'cb', 'metamark']);
-function acceptReading(appIndex, rdg, wits) {
-  const entry = S.appRanges.find(a => a.i === appIndex);
+function acceptReading(pid, appIndex, rdg, wits) {
+  const entry = S.appRanges.find(a => a.pid === pid && a.i === appIndex);
   if (!entry || !entry.range) { toast('Could not locate this lemma in the text.', true); return; }
   const range = entry.range;
   const oldText = range.toString().replace(/\s+/g, ' ').trim();
   const newText = readingText(rdg);
   if (!newText && !confirm(`Remove “${oldText}” from the text (following ${wits})?`)) return;
-  snapshot(`${S.current}: ${newText ? `read “${newText}” (${wits}) for “${oldText}”` : `omitted “${oldText}” (${wits})`}`);
+  snapshot(`${pid}: ${newText ? `read “${newText}” (${wits}) for “${oldText}”` : `omitted “${oldText}” (${wits})`}`);
   const kept = [...range.cloneContents().querySelectorAll('*')].filter(e => KEEP_IN_LEMMA.has(e.localName))
     .map(e => xmlid(e) ? S.byId.get(xmlid(e)) || e : e);
   range.deleteContents();
@@ -619,10 +811,10 @@ function acceptReading(appIndex, rdg, wits) {
   frag.append(tail);
   range.insertNode(frag);
   range.commonAncestorContainer.normalize?.();
-  S.byId.get(S.current).normalize();
+  S.byId.get(pid).normalize();
   reindex();
   focused = null;
-  changed(S.current);
+  changed(pid);
   toast(newText ? `Text now reads “${newText}”. Undo with Ctrl+Z.` : `“${oldText}” removed. Undo with Ctrl+Z.`);
 }
 
@@ -660,16 +852,27 @@ const noteHTML = note => {
   return out;
 };
 
+const noteCard = (n, pid) => h('div', {class: 'note', 'data-target': n.target},
+  h('div', {class: 'nhead'}, h('span', {class: 'nlabel'}, n.label || '—'), h('span', {class: 'ntype'}, n.type),
+    h('span', {class: 'muted'}, n.target ? n.target : 'no anchor'), h('span', {class: 'spacer'}),
+    h('button', {onclick: () => openNoteDialog({existing: n, pid})}, 'Edit')),
+  noteHTML(n.note));
 function renderNotes() {
+  const box = $('#notes');
+  if (isMulti()) {
+    const groups = S.selection.map(id => ({id, list: notesFor(id)})).filter(g => g.list.length);
+    const n = groups.reduce((a, g) => a + g.list.length, 0);
+    $('#notes-count').textContent = n ? `${n}` : '';
+    if (!n) { box.replaceChildren(h('p', {class: 'muted'}, 'No notes in these passages. To add one, open a passage alone (click its heading).')); return; }
+    box.replaceChildren(...groups.map(g => h('section', {class: 'notegroup', 'data-id': g.id},
+      h('div', {class: 'ghead'}, h('button', {class: 'mopen', title: `Open ${g.id} alone`, onclick: () => openPassage(g.id)}, g.id)),
+      ...g.list.map(x => noteCard(x, g.id)))));
+    return;
+  }
   const list = notesFor(S.current);
   $('#notes-count').textContent = list.length ? `${list.length}` : '';
-  const box = $('#notes');
   if (!list.length) { box.replaceChildren(h('p', {class: 'muted'}, 'No notes. Select a word in the text and choose “Add note”.')); return; }
-  box.replaceChildren(...list.map(n => h('div', {class: 'note', 'data-target': n.target},
-    h('div', {class: 'nhead'}, h('span', {class: 'nlabel'}, n.label || '—'), h('span', {class: 'ntype'}, n.type),
-      h('span', {class: 'muted'}, n.target ? n.target : 'no anchor'), h('span', {class: 'spacer'}),
-      h('button', {onclick: () => openNoteDialog({existing: n})}, 'Edit')),
-    noteHTML(n.note))));
+  box.replaceChildren(...list.map(n => noteCard(n, S.current)));
 }
 
 function focusNote(target) {
@@ -765,13 +968,15 @@ function teiPointFromSelection() {
 
 let noteCtx = null;
 function openNoteDialog(ctx) {
+  if (!ctx.existing && isMulti()) { needOne(); return; }
+  ctx.pid = ctx.pid || S.current;
   noteCtx = ctx;
   const d = $('#note-dialog');
   $('#note-error').hidden = true;
   if (ctx.existing) {
     const e = ctx.existing;
     $('#note-dialog-title').textContent = `Edit note ${e.label || ''}`;
-    $('#note-where').textContent = `${S.current}${e.target ? ' · anchor ' + e.target : ''}`;
+    $('#note-where').textContent = `${ctx.pid}${e.target ? ' · anchor ' + e.target : ''}`;
     $('#note-type').value = e.type;
     $('#note-text').value = [...e.note.childNodes].map(c => c.nodeType === 1 ? serializeEl(c) : c.nodeValue).join('').replace(/\s+/g, ' ').trim();
     $('#btn-note-ok').textContent = 'Save note';
@@ -808,11 +1013,11 @@ $('#note-form').addEventListener('submit', e => {
     const ex = ctx.existing;
     const oldBody = [...ex.note.childNodes].map(c => c.nodeType === 1 ? serializeEl(c) : c.nodeValue).join('').replace(/\s+/g, ' ').trim();
     if (oldBody === body.replace(/\s+/g, ' ') && type === ex.type) return;
-    snapshot(`${S.current}: edited note ${ex.target || ''}`);
+    snapshot(`${ctx.pid}: edited note ${ex.target || ''}`);
     const fresh = noteElement(ex.target, body);
     for (const a of ex.note.attributes) if (!fresh.hasAttribute(a.name)) fresh.setAttribute(a.name, a.value);
     if (type === ex.type) ex.note.replaceWith(fresh);
-    else { removeNote(ex.note); addNoteTo(S.current, type, fresh); }
+    else { removeNote(ex.note); addNoteTo(ctx.pid, type, fresh); }
   } else {
     const id = S.current;
     const anchorId = nextAnchorId(id);
@@ -834,23 +1039,24 @@ $('#note-form').addEventListener('submit', e => {
   }
   S.noteTypes.add(type);
   reindex();
-  changed(S.current);
+  changed(ctx.pid);
   if (!ctx.existing) toast('Note added. Undo with Ctrl+Z.');
 });
 
 $('#btn-note-delete').addEventListener('click', () => {
   const ex = noteCtx?.existing; if (!ex) return;
   if (!confirm('Delete this note' + (ex.target ? ' and its anchor in the text' : '') + '?')) return;
+  const pid = noteCtx.pid || S.current;
   $('#note-dialog').close(); noteCtx = null;
-  snapshot(`${S.current}: deleted note ${ex.target || ''}`);
+  snapshot(`${pid}: deleted note ${ex.target || ''}`);
   removeNote(ex.note);
   if (ex.target) {
     const stillUsed = teiEls(S.doc, 'note').some(n => (n.getAttribute('target') || '').split(/\s+/).includes('#' + ex.target));
     if (!stillUsed) S.byId.get(ex.target)?.remove();
   }
-  S.byId.get(S.current)?.normalize();
+  S.byId.get(pid)?.normalize();
   reindex();
-  changed(S.current);
+  changed(pid);
   toast('Note deleted. Undo with Ctrl+Z.');
 });
 
@@ -858,7 +1064,7 @@ $('#btn-note-delete').addEventListener('click', () => {
 document.addEventListener('selectionchange', () => {
   const pop = $('#selection-pop');
   const sel = window.getSelection();
-  if (S.mode !== 'read' || !sel.rangeCount || sel.isCollapsed || !$('#passage').contains(sel.anchorNode)) { pop.hidden = true; return; }
+  if (S.mode !== 'read' || isMulti() || !sel.rangeCount || sel.isCollapsed || !$('#passage').contains(sel.anchorNode)) { pop.hidden = true; return; }
   const rect = sel.getRangeAt(0).getBoundingClientRect();
   pop.style.left = `${Math.max(8, rect.right - 40)}px`; pop.style.top = `${rect.bottom + 6}px`;
   pop.hidden = false;
@@ -988,7 +1194,37 @@ function witnessDrag(box, siglum) {
   });
 }
 
+// several passages: each witness's text of every passage shown, under the passage's id
+function renderWitnessesMulti() {
+  const box = $('#witnesses');
+  const ids = S.selection;
+  const rows = S.witnesses.map(w => ({w, els: ids.map(id => witPassage(w.doc, id))}))
+    .sort((a, b) => (!a.els.some(Boolean) - !b.els.some(Boolean)) || (witnessRank(a.w) - witnessRank(b.w)));
+  box.replaceChildren(...rows.map(({w, els}) => {
+    const grip = h('span', {class: 'wgrip', title: 'Drag to change the order of the witnesses', 'aria-hidden': 'true'}, '⠿');
+    const head = h('div', {class: 'whead'}, grip, h('span', {class: 'wsig'}, w.siglum), h('span', {class: 'wtitle', title: w.title}, w.title));
+    const present = els.filter(Boolean).length;
+    if (!present) { const b = h('div', {class: 'wit absent', 'data-siglum': w.siglum}, head, h('div', {class: 'muted'}, 'none of these passages is in this witness')); witnessDrag(b, w.siglum); return b; }
+    const firstEl = els.find(Boolean);
+    const {before, inside} = precedingPb(firstEl);
+    const pb = before || inside;
+    if (pb && w.manifest && pb.getAttribute('facs')) head.append(h('button', {title: 'Show the manuscript page of the first of these passages', onclick: () => showImage(w, pb)}, `image ${pb.getAttribute('n') || ''}`));
+    else if (pb) head.append(h('span', {class: 'muted'}, pb.getAttribute('n') || ''));
+    if (present < ids.length) head.append(h('span', {class: 'muted wcount'}, `${present} of ${ids.length}`));
+    const segs = ids.map((id, k) => {
+      const t = h('div', {class: 'wtext'});
+      if (els[k]) witHTML(els[k], t); else t.append(h('span', {class: 'muted'}, 'not in this witness'));
+      return h('div', {class: 'wseg', 'data-id': id},
+        h('button', {class: 'wid mopen', title: `Open ${id} alone (to correct ${w.siglum}’s transcription of it: “edit”)`, onclick: () => openPassage(id)}, id), t);
+    });
+    const b = h('div', {class: 'wit', 'data-siglum': w.siglum}, head, ...segs);
+    witnessDrag(b, w.siglum);
+    return b;
+  }));
+  if (S.badFiles.length) box.append(h('p', {class: 'error'}, 'Not loaded: ' + S.badFiles.map(b => b.file).join(', ') + ' (see Settings).'));
+}
 function renderWitnesses() {
+  if (isMulti()) { renderWitnessesMulti(); return; }
   const box = $('#witnesses');
   const id = S.current;
   box.replaceChildren(...orderedWitnesses(id).map(({w, el}) => {
@@ -1049,6 +1285,7 @@ $('#btn-image-close').addEventListener('click', () => { $('#image-panel').hidden
 let AL = null;   // {id, m: AlignMatrix, hist: [], base}
 function startAligner() {
   if (S.mode !== 'read') return;
+  if (isMulti()) { needOne(); return; }
   const id = S.current;
   const r = S.results.get(id);
   if (!r || r.hash !== serializeEl(S.byId.get(id)) || !r.res.alignXML) { toast('Wait for the collation to finish first.', true); return; }
@@ -1158,6 +1395,7 @@ async function saveAlignment() {
 // ================================================================ correcting a witness transcription
 function editWitness(w, el, box) {
   if (S.mode !== 'read') { toast('Finish or cancel the current edit first.', true); return; }
+  if (isMulti()) { needOne(); return; }
   S.mode = 'witness';
   updateStatus();
   const ta = h('textarea', {class: 'wit-src', spellcheck: 'false'});
@@ -1224,6 +1462,7 @@ function editableLines(el) {
 
 function startEdit() {
   if (S.mode !== 'read') return;
+  if (isMulti()) { needOne(); return; }
   const el = S.byId.get(S.current);
   if (!el) return;
   S.mode = 'edit';
@@ -1355,6 +1594,7 @@ function endEdit() {
 // ================================================================ edit TEI source
 function startSource() {
   if (S.mode !== 'read') return;
+  if (isMulti()) { needOne(); return; }
   const el = S.byId.get(S.current);
   S.mode = 'source';
   $('#source-text').value = serializeEl(el);
@@ -1469,7 +1709,7 @@ async function save() {
   S.baseProblems = new Set(noteProblems(S.origDoc));
   reindex();
   rememberOriginal();
-  openPassage(S.current, {keepScroll: true});
+  refreshView();
   renderList();
   updateStatus();
   const extra = Object.keys(alignments).length ? ` and ${Object.keys(alignments).length} alignment file(s)` : '';
@@ -1842,7 +2082,7 @@ function openNexus() {
   $('#nexus-gaps').checked = o.gapsSignificant;
   $(`#nexus-dialog input[name="nexus-corr"][value="${o.corrections === 'pc' ? 'pc' : 'ac'}"]`).checked = true;
   $('#nexus-all-label').textContent = `All ${S.blocks.length} passages of ${S.editionFile}`;
-  $('#nexus-current-label').textContent = `This passage only (${S.current})`;
+  $('#nexus-current-label').textContent = isMulti() ? `The ${S.selection.length} passages shown (${selectionLabel(S.selection, S.blocks)})` : `This passage only (${S.current})`;
   $('#nexus-files-label').textContent = `The saved alignment files (${S.cfg.alignmentsDir || 'alignments'}/) as they are`;
   // the witnesses, and the edition itself (off: it is the editor's reconstruction, not a witness)
   const wits = [...S.witnesses.map(w => [w.siglum, w.title, true]), [S.edSiglum, `the edition (${S.editionFile})`, false]];
@@ -1861,7 +2101,8 @@ async function runNexus() {
                 corrections: $('#nexus-dialog input[name="nexus-corr"]:checked').value};
   savePrefs({nexus: opts});
   const all = $('#nexus-dialog input[name="nexus-scope"]:checked').value === 'all';
-  const ids = all ? S.blocks : [S.current];
+  const ids = all ? S.blocks : isMulti() ? [...S.selection] : [S.current];
+  const part = all ? '' : ids.length > 1 ? `${ids[0]}-${ids[ids.length - 1]}` : ids[0];
   const asSaved = $('#nexus-dialog input[name="nexus-source"]:checked').value === 'files';
   const run = nexusRun = {cancel: false};
   $('#nexus-form').inert = true;
@@ -1890,12 +2131,12 @@ async function runNexus() {
   const how = [opts.normalize ? 'normalized spellings' : 'spellings as written', opts.mergeGroups ? 'one character per word group' : 'one character per aligned cell',
     opts.gapsSignificant ? 'gaps significant' : 'gaps not significant', opts.corrections === 'pc' ? 'post correctionem' : 'ante correctionem',
     asSaved ? 'saved alignment files' : 'alignments up to date with the texts'];
-  const r = buildNexus(passages, taxa, {...opts, title: `${S.editionFile}${all ? '' : ', ' + S.current}: ${taxa.join(', ')}; ${how.join(', ')}. Saktumiva editor ${S.version || ''}`.trim()});
+  const r = buildNexus(passages, taxa, {...opts, title: `${S.editionFile}${all ? '' : ', ' + (ids.length > 1 ? ids.join(' ') : part)}: ${taxa.join(', ')}; ${how.join(', ')}. Saktumiva editor ${S.version || ''}`.trim()});
   none.push(...r.skipped);
   const base = S.editionFile.replace(/\.[^.]+$/, '');
-  if (r.nchar) download(`${base}${all ? '' : '_' + S.current}.nex`, r.text);
+  if (r.nchar) download(`${base}${all ? '' : '_' + part}.nex`, r.text);
   status.replaceChildren(
-    r.nchar ? `Saved ${base}${all ? '' : '_' + S.current}.nex (in your downloads): ${r.ntax} witnesses, ${r.nchar} characters from ${r.passages} passage${r.passages === 1 ? '' : 's'}.`
+    r.nchar ? `Saved ${base}${all ? '' : '_' + part}.nex (in your downloads): ${r.ntax} witnesses, ${r.nchar} characters from ${r.passages} passage${r.passages === 1 ? '' : 's'}.`
             : 'Nothing to export: no passage has an alignment.',
     ...(r.tooMany ? [h('br'), `${r.tooMany} character(s) have more readings than NEXUS symbols (54); the extra readings are written as ?.`] : []),
     ...(none.length ? [h('br'), `Left out (${none.length}): ${none.slice(0, 8).map(([id, why]) => `${id} (${why})`).join('; ')}${none.length > 8 ? ' …' : ''}`] : []));
@@ -1938,6 +2179,8 @@ $('#btn-save').addEventListener('click', save);
 $('#btn-undo').addEventListener('click', doUndo);
 $('#btn-redo').addEventListener('click', doRedo);
 $('#filter').addEventListener('input', () => renderList());
+$('#btn-several').addEventListener('click', () => setSeveral(!S.several));
+$('#btn-single').addEventListener('click', () => openPassage(S.current));
 $('#passage').addEventListener('dblclick', e => { if (S.mode === 'read' && !e.target.closest('.chip')) { window.getSelection().removeAllRanges(); startEdit(); } });
 
 document.addEventListener('keydown', e => {
@@ -1946,6 +2189,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && S.mode === 'edit') { finishEdit(false); return; }
   if (e.key === 'Escape' && S.mode === 'source') { endEdit(); return; }
   if (e.key === 'Escape' && S.mode === 'align') { endAligner(); return; }
+  if (e.key === 'Escape' && S.mode === 'read' && isMulti() && !inField) { openPassage(S.current); return; }
   if (S.mode === 'edit' && e.key === 'Enter') { e.preventDefault(); if (e.ctrlKey || e.metaKey) finishEdit(true); return; }
   if (inField) return;
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
@@ -1965,4 +2209,4 @@ load().catch(e => {
 });
 
 // expose for testing in the browser console
-window.__editor = {S, save, buildRaw, get AL() { return AL; }};
+window.__editor = {S, save, buildRaw, showSeveral, openPassage, get AL() { return AL; }};

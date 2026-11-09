@@ -299,12 +299,18 @@ export class Collator {
 
   // ---------------------------------------------------------- alignment (slow, in a worker)
   // priority 'high' jobs go first and interrupt a running 'low' (look-ahead) job.
+  // 'batch' jobs (several passages shown at once) wait behind 'high' ones, in the order asked for,
+  // ahead of 'low' ones, which they also interrupt; dropQueued('batch') gives up those not started.
   align(block, {priority = 'high', onProgress} = {}) {
     return new Promise((resolve, reject) => {
       const job = {block, priority, resolve, reject, onProgress};
-      if (priority === 'high') {
+      if (priority === 'high' || priority === 'batch') {
         this.queue = this.queue.filter(j => !(j.block === block && j.priority === 'low' && (j.resolve(null), true)));
-        this.queue.unshift(job);
+        if (priority === 'high') this.queue.unshift(job);
+        else {
+          const at = this.queue.findIndex(j => j.priority === 'low');
+          this.queue.splice(at < 0 ? this.queue.length : at, 0, job);
+        }
         if (this.running && this.running.priority === 'low') this._interrupt();
       } else {
         if (this.queue.some(j => j.block === block) || this.running?.block === block) return resolve(null);
@@ -312,6 +318,10 @@ export class Collator {
       }
       this._next();
     });
+  }
+
+  dropQueued(priority) {
+    this.queue = this.queue.filter(j => !(j.priority === priority && (j.resolve(null), true)));
   }
 
   _interrupt() {

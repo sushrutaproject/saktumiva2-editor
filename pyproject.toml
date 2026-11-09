@@ -20,6 +20,7 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+browser = ["playwright>=1.40"]
 
 [project.urls]
 Homepage = "https://github.com/sushrutaproject/saktumiva2-editor"

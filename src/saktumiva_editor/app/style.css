@@ -266,3 +266,32 @@ a.button { font: inherit; border: 1px solid var(--line); background: var(--panel
 #chooser select, #chooser #pub { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
 #chooser .wits { display: flex; flex-direction: column; gap: 3px; }
 #chooser label.check { font-weight: normal; margin: 0; }
+
+/* several passages at once */
+.list-tools { display: flex; align-items: center; gap: 8px; margin: -4px 10px 6px; font-size: 12px; }
+.list-tools button { padding: 2px 8px; font-size: 12px; }
+#btn-several[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.pitem .pcheck { display: none; margin: 3px 0 0; accent-color: var(--accent); }
+#passage-list.several .pcheck { display: inline-block; }
+.pitem.selected { background: var(--accent-soft); border-left-color: var(--accent); }
+.pitem.selected.current { box-shadow: inset 0 0 0 1px var(--accent); }
+#passage-list { user-select: none; }
+
+.passage .mpass + .mpass { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.mhead, .ghead { display: flex; align-items: baseline; gap: 10px; font: 12px var(--sans); }
+.mhead { margin-bottom: 2px; }
+button.mopen { font: 600 12px var(--sans); padding: 1px 8px; color: var(--accent); background: transparent;
+  border-color: var(--line); font-variant-numeric: tabular-nums; }
+button.mopen:hover { background: var(--accent-soft); }
+.mstatus { font-size: 12px; }
+.mstatus.busy::before { content: "◌ "; color: var(--accent); }
+.mstatus.ok::before { content: "✓ "; color: var(--ok); }
+.mstatus.bad { color: var(--bad); }
+.mhead .mark, .ghead .mark { font-size: 11px; color: var(--accent); }
+.mhead .mark.dirty::before, .ghead .mark.dirty::before { content: "● unsaved"; }
+.appgroup { margin-bottom: 10px; }
+.appgroup .ghead { padding: 4px 0; border-bottom: 1px solid var(--line); margin-bottom: 4px; position: sticky; top: 0; background: var(--bg); z-index: 2; }
+.notegroup .ghead { margin: 6px 0 4px; }
+.wit .wseg + .wseg { margin-top: 4px; }
+.wit .wseg .wid { font-size: 11px; padding: 0 6px; margin-bottom: 1px; }
+.wit .wcount { font-size: 12px; }

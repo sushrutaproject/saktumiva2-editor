@@ -98,6 +98,14 @@ online until you push. Work cycle: edit → Publish → check the published file
 * **Passage list** (left): every `lg`, `p` and `l` with an `xml:id`. A dot marks unsaved changes.
 * **Text** (centre): the passage as it stands in the edition file. Underlined words have variants.
   Click one to find its apparatus entry.
+* **Several passages at once**: Shift-click a passage in the list to show the range from the one clicked last,
+  Ctrl-click (⌘-click on a Mac) to add or remove one; **Show several** above the list gives each passage a tick
+  box for the same. The passages are shown in document order, each under its `xml:id`, as continuous text; the
+  apparatus, the notes and the witnesses' texts are grouped under each passage's id. Passages that must be
+  collated are collated in the background, each showing its progress, and appear as each is ready. **use** /
+  **omit** and editing an existing note work here too; for everything else (Edit text, TEI source, Add note,
+  Correct alignment, a witness's **edit**) click a passage's id to open it alone, or press **Show one passage**
+  (or Esc). A plain click in the list shows one passage as before. The choice is remembered for the browser session.
 * **Apparatus**: built by Saktumiva for this passage, from the alignment settings of your
   existing alignment files. Point at a reading and press **use** to put it in the text;
   the passage is collated again and the old lemma becomes a variant.
@@ -118,7 +126,7 @@ online until you push. Work cycle: edit → Publish → check the published file
   and **edit**, which corrects the witness's own transcription of the passage (as TEI). That is saved
   at once to the witness file, with a git commit, and the passage is collated again.
   Drag a witness by its handle (⠿) to reorder the list; the order is remembered. Witnesses that lack the
-  passage are listed last.
+  passage are listed last. With several passages shown, each witness gives its text of each of them.
 * **Data export** (top bar) → **NEXUS for SplitsTree…**: a character matrix of the aligned readings of the section
   (or one passage), as Saktumiva's matrix editor exports it, to open in SplitsTree. Options: the witnesses, Kac or
   Kpc for corrected witnesses, normalized spellings, one character per word group, gaps significant; alignments
@@ -189,7 +197,7 @@ saktumiva-editor
 * `src/saktumiva_editor/server.py`: the local server (Python standard library only); `cli.py`, `project.py`
   (sections, configuration, recent projects), `updates.py` (GitHub Releases).
 * `src/saktumiva_editor/app/`: the editing screen (`index.html`, `main.mjs` …) and the project chooser (`chooser.*`).
-  `nexus.mjs` makes the NEXUS matrix from alignment files; `stemma.mjs` reads and draws the stemmata; it needs no other file and returns plain SVG, so it can be used on a web page as well.
+  `multi.mjs` chooses several passages from clicks in the list. `nexus.mjs` makes the NEXUS matrix from alignment files; `stemma.mjs` reads and draws the stemmata; it needs no other file and returns plain SVG, so it can be used on a web page as well.
 * `src/saktumiva_editor/app/saktumiva/`: **Saktumiva, as a git submodule** pinned to one commit of
   [chchch/saktumiva](https://github.com/chchch/saktumiva). Only its `lib/` and the OpenSeadragon image viewer are
   served and packaged.
@@ -202,14 +210,19 @@ saktumiva-editor
 
 ```bash
 python -m pytest                     # the server, configuration, update check
-cd tests/js && npm ci && node --test # the collation regression tests
+cd tests/js && npm ci && node --test # the collation regression tests (Node 22)
 ```
+
+The browser tests (`tests/python/test_browser_several.py`: choosing several passages, the combined apparatus,
+going back to one passage) run with Playwright and are skipped without it:
+`python -m pip install -e ".[test,browser]" && python -m playwright install chromium` (an installed Google Chrome
+is used if Playwright's own Chromium is missing).
 
 The regression tests run the editor's collation and apparatus code, with the pinned Saktumiva, on real sections
 (`tests/fixtures`: the Suśrutasaṃhitā Śārīrasthāna and Rasendramaṅgala chapter 1) and compare the alignments,
 apparatus and published `<standOff>` with the stored results in `tests/golden`. `stemma.test.mjs` tests the Stemma view
 on the NeXML of SplitsTree6, Saktumiva and Bio::Phylo (`tests/fixtures/stemma` and the Rasendramaṅgala fixture);
-`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`). They also check that the patch
+`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`), `multi.test.mjs` choosing several passages (`app/multi.mjs`). They also check that the patch
 still fits and still matters (switching script notes off must change the apparatus of certain passages).
 
 ### Updating Saktumiva

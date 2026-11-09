@@ -40,7 +40,7 @@ RELEASE = {'tag_name': 'v99.0.0', 'html_url': 'https://github.com/x/releases/tag
 
 
 def test_newer_release_for_pipx(monkeypatch):
-    monkeypatch.setattr(updates.urllib.request, 'urlopen', lambda req, timeout: FakeResponse(RELEASE))
+    monkeypatch.setattr(updates.urllib.request, 'urlopen', lambda req, timeout, context=None: FakeResponse(RELEASE))
     monkeypatch.setattr(updates, 'install_kind', lambda: 'pipx')
     r = updates.check()
     assert r['newer'] and r['latest'] == '99.0.0' and r['current'] == __version__
@@ -48,7 +48,7 @@ def test_newer_release_for_pipx(monkeypatch):
 
 
 def test_newer_release_for_executable(monkeypatch):
-    monkeypatch.setattr(updates.urllib.request, 'urlopen', lambda req, timeout: FakeResponse(RELEASE))
+    monkeypatch.setattr(updates.urllib.request, 'urlopen', lambda req, timeout, context=None: FakeResponse(RELEASE))
     monkeypatch.setattr(sys, 'frozen', True, raising=False)
     r = updates.check()
     assert r['kind'] == 'executable' and r['how']['url'] == 'https://dl/exe'
@@ -56,13 +56,13 @@ def test_newer_release_for_executable(monkeypatch):
 
 def test_same_version_is_up_to_date(monkeypatch):
     monkeypatch.setattr(updates.urllib.request, 'urlopen',
-                        lambda req, timeout: FakeResponse({**RELEASE, 'tag_name': f'v{__version__}'}))
+                        lambda req, timeout, context=None: FakeResponse({**RELEASE, 'tag_name': f'v{__version__}'}))
     r = updates.check()
     assert r['newer'] is False and 'how' not in r
 
 
 def test_offline(monkeypatch):
-    def fail(req, timeout):
+    def fail(req, timeout, context=None):
         raise updates.urllib.error.URLError('no network')
     monkeypatch.setattr(updates.urllib.request, 'urlopen', fail)
     assert 'no network' in updates.check()['error']
@@ -83,7 +83,7 @@ def test_patch_must_match_exactly_once():
 
 
 def test_private_or_unreleased(monkeypatch):
-    def fail(req, timeout):
+    def fail(req, timeout, context=None):
         raise updates.urllib.error.HTTPError(updates.API, 404, 'Not Found', {}, None)
     monkeypatch.setattr(updates.urllib.request, 'urlopen', fail)
     r = updates.check()
@@ -92,10 +92,17 @@ def test_private_or_unreleased(monkeypatch):
 
 def test_token_is_sent(monkeypatch):
     seen = {}
-    def fake(req, timeout):
+    def fake(req, timeout, context=None):
         seen['auth'] = req.get_header('Authorization')
         return FakeResponse({**RELEASE, 'tag_name': f'v{__version__}'})
     monkeypatch.setattr(updates, 'github_token', lambda: 'abc')
     monkeypatch.setattr(updates.urllib.request, 'urlopen', fake)
     updates.check()
     assert seen['auth'] == 'Bearer abc'
+
+
+def test_ssl_context_has_roots(monkeypatch):
+    monkeypatch.setattr(updates, '_SSL_CONTEXT', None)
+    ctx = updates.ssl_context()
+    assert ctx.verify_mode == updates.ssl.CERT_REQUIRED and ctx.check_hostname
+    assert ctx.cert_store_stats()['x509_ca'] > 0

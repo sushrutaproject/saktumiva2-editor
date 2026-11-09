@@ -4,6 +4,7 @@ import json
 import os
 import platform
 import re
+import ssl
 import subprocess
 import sys
 import urllib.error
@@ -78,6 +79,46 @@ def github_token():
         return None
 
 
+_SSL_CONTEXT = None
+
+
+def ssl_context() -> ssl.SSLContext:
+    """A context that can verify GitHub's certificate.
+
+    Python's OpenSSL does not read the macOS keychain. The ready-made Mac program, and Python from python.org
+    unless its 'Install Certificates' step was run, therefore start with no trusted root certificates at all, and
+    every HTTPS request fails with CERTIFICATE_VERIFY_FAILED. When that is so, use certifi's roots if certifi is
+    installed, or else the macOS system roots, read with the `security` tool.
+    """
+    global _SSL_CONTEXT
+    if _SSL_CONTEXT is not None:
+        return _SSL_CONTEXT
+    ctx = ssl.create_default_context()
+    if not ctx.cert_store_stats().get('x509_ca'):
+        try:
+            import certifi
+            ctx.load_verify_locations(cafile=certifi.where())
+        except (ImportError, OSError, ssl.SSLError):
+            if sys.platform == 'darwin':
+                pem = ''
+                for keychain in ('/System/Library/Keychains/SystemRootCertificates.keychain',
+                                 '/Library/Keychains/System.keychain'):
+                    try:
+                        r = subprocess.run(['security', 'find-certificate', '-a', '-p', keychain],
+                                           capture_output=True, text=True, timeout=10)
+                        if r.returncode == 0:
+                            pem += r.stdout
+                    except (OSError, subprocess.TimeoutExpired):
+                        pass
+                if pem:
+                    try:
+                        ctx.load_verify_locations(cadata=pem)
+                    except ssl.SSLError:
+                        pass
+    _SSL_CONTEXT = ctx
+    return ctx
+
+
 def check(timeout: float = 8.0) -> dict:
     """{current, latest, newer, notes, page, how} -- or {error} if GitHub cannot be reached."""
     kind = install_kind()
@@ -88,7 +129,7 @@ def check(timeout: float = 8.0) -> dict:
         headers['Authorization'] = f'Bearer {token}'
     req = urllib.request.Request(API, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with urllib.request.urlopen(req, timeout=timeout, context=ssl_context()) as r:
             release = json.loads(r.read().decode('utf-8'))
     except urllib.error.HTTPError as e:
         if e.code == 404:

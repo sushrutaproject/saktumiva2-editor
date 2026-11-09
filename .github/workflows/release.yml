@@ -59,7 +59,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: python -m pip install . pyinstaller
+      - run: python -m pip install . pyinstaller certifi
       - name: Build
         run: pyinstaller --onefile --name saktumiva-editor --collect-data saktumiva_editor --console packaging/entry.py
       - name: The program starts

@@ -82,7 +82,6 @@ such as *Editing Sanskrit texts with Saktumiva*. Each video covers one or two pa
 | (Cut) macOS: right-click → **Open** → **Open** | On a Mac, right-click and choose Open the first time. |
 | The terminal window, then the browser with the project chooser | A terminal window opens, and then the editor in your browser. Keep the terminal open while you work; closing it stops the editor. |
 | Start it a second time; the browser opens the same editor | If you start it again while it's running, it just opens the copy that's already running. |
-| (Optional) `pipx install git+https://github.com/sushrutaproject/saktumiva2-editor.git` | If you use Python, you can install it with pipx instead. |
 | **Help ▾ → Check for updates…** showing "up to date", then (staged) a newer version with a download link | To see whether there's a newer version: Help, Check for updates. It tells you what's new and how to update. For the ready-made program, download the new one and replace the old. Your files are never touched: they live in your repository, not in the program. |
 | Close the old terminal window; start the new version | Then close the old copy and start the new one. If you forget, the new one tells you the old one is still running. |
 | Terminal: `saktumiva-editor --check-updates` | You can also check from a terminal. |

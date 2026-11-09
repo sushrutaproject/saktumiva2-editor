@@ -57,12 +57,12 @@ def how_to_update(kind: str, release: dict) -> dict:
             return {'text': f'Download {mine["name"]}, unpack it and replace this program with the new one.',
                     'url': mine['browser_download_url']}
         return {'text': f'There is no ready-made program for {platform_tag()} in this release. '
-                        'Install with pipx instead (see the release page).', 'url': release.get('html_url')}
+                        'Install it with Python instead (see the release page).', 'url': release.get('html_url')}
     if kind == 'source':
         return {'text': 'This copy runs from a git checkout. Update it with:',
                 'command': f'git pull && git checkout {tag} && git submodule update --init'}
     target = wheel['browser_download_url'] if wheel else f'git+https://github.com/{GITHUB_REPO}.git@{tag}'
-    tool = 'pipx install --force' if kind == 'pipx' else f'{Path(sys.executable).name} -m pip install --upgrade'
+    tool = 'pipx install --force' if kind == 'pipx' else f'"{sys.executable}" -m pip install --upgrade'
     return {'text': 'In a terminal, run:', 'command': f'{tool} {target}'}
 
 

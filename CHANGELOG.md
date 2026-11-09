@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.1 (9 November 2026)
+
+* **Check for updates works on macOS.** Python there does not read the Mac's keychain, so the ready-made Mac
+  program (and Python from python.org) had no trusted certificates, and the check failed with
+  "CERTIFICATE_VERIFY_FAILED". The editor now falls back to the `certifi` certificates, which the ready-made
+  programs include, or else to the Mac's own system certificates. If you have the ready-made program, download
+  this release by hand: your copy cannot see it.
+* The documentation no longer recommends pipx. Install the ready-made program; on an Intel Mac, or if you prefer,
+  install with Python in a virtual environment (see the README). The update command for a Python install now
+  names that environment's Python in full.
+
 ## 0.5.0 (9 November 2026)
 
 * **Several passages at once.** Shift-click in the passage list shows the range from the passage clicked last;

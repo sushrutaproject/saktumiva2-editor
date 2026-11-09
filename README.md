@@ -23,17 +23,17 @@ opens in your web browser. Close the terminal window, or press Ctrl+C in it, to 
 
 * **macOS**: the program is not signed by Apple. The first time, right-click it and choose *Open*,
   or run `xattr -d com.apple.quarantine saktumiva-editor` in a terminal. It is built for Apple
-  silicon (M1 and later); on an Intel Mac, use pipx.
+  silicon (M1 and later); on an Intel Mac, install it with Python (below).
 * **Windows**: SmartScreen may warn about an unknown publisher: choose *More info → Run anyway*.
 
-**With [pipx](https://pipx.pypa.io)** (Python 3.10 or later; works everywhere):
+**With Python** (3.10 or later; for Intel Macs, or if you prefer), in its own virtual environment:
 
 ```bash
-pipx install git+https://github.com/sushrutaproject/saktumiva2-editor.git
+python3 -m venv ~/saktumiva-editor-env
+~/saktumiva-editor-env/bin/pip install git+https://github.com/sushrutaproject/saktumiva2-editor.git
 ```
 
-or, from a release, `pipx install https://github.com/sushrutaproject/saktumiva2-editor/releases/download/v0.1.0/saktumiva_editor-0.1.0-py3-none-any.whl`.
-Then run `saktumiva-editor` in a terminal.
+Then run `~/saktumiva-editor-env/bin/saktumiva-editor` in a terminal.
 
 **Updating**: *Help → Check for updates* in the editor (or `saktumiva-editor --check-updates`)
 tells you whether there is a newer release and gives the command or download link for the way you installed it.

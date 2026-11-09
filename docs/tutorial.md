@@ -303,18 +303,19 @@ The first time only:
 
 * **macOS**: the program is not signed by Apple, so macOS refuses to open it with a double-click. Right-click it and
   choose **Open**, then **Open** again. (The ready-made program is for Apple silicon Macs, M1 and later; on an older
-  Intel Mac, use pipx.)
+  Intel Mac, install it with Python, below.)
 * **Windows**: SmartScreen may warn about an unknown publisher. Click **More info → Run anyway**.
 
-### With pipx (for Python users)
+### With Python (Intel Macs, or Python users)
 
-If you have Python 3.10 or later and [pipx](https://pipx.pypa.io):
+If you have Python 3.10 or later, install the editor in its own virtual environment:
 
 ```bash
-pipx install git+https://github.com/sushrutaproject/saktumiva2-editor.git
+python3 -m venv ~/saktumiva-editor-env
+~/saktumiva-editor-env/bin/pip install git+https://github.com/sushrutaproject/saktumiva2-editor.git
 ```
 
-Then type `saktumiva-editor` in a terminal.
+Then type `~/saktumiva-editor-env/bin/saktumiva-editor` in a terminal.
 
 You also need **git** installed for the editor to keep the history of your saves (GitHub Desktop users on Windows
 and macOS: install git as well, from [git-scm.com](https://git-scm.com)). Without git the editor still works, but
@@ -328,7 +329,7 @@ In the editor, open **Help ▾ → Check for updates…**. The editor asks GitHu
 there is, it tells you what has changed and how to update, in the way that fits how you installed it:
 
 * **Ready-made program**: a link to the new download. Download it, unzip it, and replace the old program with it.
-* **pipx**: a command to copy into a terminal, of the form `pipx install --force …`.
+* **Installed with Python**: a command to copy into a terminal, of the form `…/bin/python -m pip install --upgrade …`.
 
 Then stop the old copy (close its terminal window, or press Ctrl+C in it) and start the new one. If you forget, the
 new version tells you that an older copy is still running, and where.

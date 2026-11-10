@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (10 November 2026)
 
 * **Merge passages.** With several passages shown that follow one another, **Merge…** (above the text) makes one
   passage of them, under the `xml:id` of the first, in the edition and in every witness file. Only the tags between

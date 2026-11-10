@@ -106,6 +106,13 @@ online until you push. Work cycle: edit → Publish → check the published file
   **omit** and editing an existing note work here too; for everything else (Edit text, TEI source, Add note,
   Correct alignment, a witness's **edit**) click a passage's id to open it alone, or press **Show one passage**
   (or Esc). A plain click in the list shows one passage as before. The choice is remembered for the browser session.
+* **Merge and split passages**: with several passages shown that follow one another, **Merge…** makes one passage
+  of them under the `xml:id` of the first, in the edition and in every witness file (only the tags between them
+  are removed). **Split…**, with one passage shown, divides it in two: click in the edition's text where the
+  second passage begins; each witness is marked at the matching place, going by the alignment, for you to check
+  and move; then give the two parts their ids. Notes follow their passage. Both are saved straight away to all the
+  files as one git commit (save your other changes first), each file's text is checked to be letter for letter
+  what it was, and the passages are collated afresh. Ctrl+Z does not undo them: revert the commit in git.
 * **Apparatus**: built by Saktumiva for this passage, from the alignment settings of your
   existing alignment files. Point at a reading and press **use** to put it in the text;
   the passage is collated again and the old lemma becomes a variant.
@@ -197,7 +204,7 @@ saktumiva-editor
 * `src/saktumiva_editor/server.py`: the local server (Python standard library only); `cli.py`, `project.py`
   (sections, configuration, recent projects), `updates.py` (GitHub Releases).
 * `src/saktumiva_editor/app/`: the editing screen (`index.html`, `main.mjs` …) and the project chooser (`chooser.*`).
-  `multi.mjs` chooses several passages from clicks in the list. `nexus.mjs` makes the NEXUS matrix from alignment files; `stemma.mjs` reads and draws the stemmata; it needs no other file and returns plain SVG, so it can be used on a web page as well.
+  `multi.mjs` chooses several passages from clicks in the list. `restructure.mjs` merges and splits passages in one file's text. `nexus.mjs` makes the NEXUS matrix from alignment files; `stemma.mjs` reads and draws the stemmata; it needs no other file and returns plain SVG, so it can be used on a web page as well.
 * `src/saktumiva_editor/app/saktumiva/`: **Saktumiva, as a git submodule** pinned to one commit of
   [chchch/saktumiva](https://github.com/chchch/saktumiva). Only its `lib/` and the OpenSeadragon image viewer are
   served and packaged.
@@ -214,7 +221,7 @@ cd tests/js && npm ci && node --test # the collation regression tests (Node 22)
 ```
 
 The browser tests (`tests/python/test_browser_several.py`: choosing several passages, the combined apparatus,
-going back to one passage) run with Playwright and are skipped without it:
+going back to one passage; `test_browser_restructure.py`: merging and splitting passages, down to the files on disk) run with Playwright and are skipped without it:
 `python -m pip install -e ".[test,browser]" && python -m playwright install chromium` (an installed Google Chrome
 is used if Playwright's own Chromium is missing).
 
@@ -222,7 +229,7 @@ The regression tests run the editor's collation and apparatus code, with the pin
 (`tests/fixtures`: the Suśrutasaṃhitā Śārīrasthāna and Rasendramaṅgala chapter 1) and compare the alignments,
 apparatus and published `<standOff>` with the stored results in `tests/golden`. `stemma.test.mjs` tests the Stemma view
 on the NeXML of SplitsTree6, Saktumiva and Bio::Phylo (`tests/fixtures/stemma` and the Rasendramaṅgala fixture);
-`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`), `multi.test.mjs` choosing several passages (`app/multi.mjs`). They also check that the patch
+`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`), `multi.test.mjs` choosing several passages (`app/multi.mjs`), `restructure.test.mjs` merging and splitting passages (`app/restructure.mjs`). They also check that the patch
 still fits and still matters (switching script notes off must change the apparatus of certain passages).
 
 ### Updating Saktumiva

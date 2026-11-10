@@ -368,6 +368,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json({'ok': False, 'error': str(e)}, 400)
             return self._json({'ok': True})
         handlers = {'/api/publish': self._publish, '/api/config': self._set_config, '/api/save': self._save,
+                    '/api/restructure': self._restructure,
                     '/api/alignments': lambda r: self._write_alignments(r.get('alignments') or {}, r.get('message'))}
         if u.path not in handlers:
             return self.send_error(HTTPStatus.NOT_FOUND)
@@ -445,6 +446,57 @@ class Handler(SimpleHTTPRequestHandler):
             h = git(folder, 'rev-parse', '--short', 'HEAD')
             return h.stdout.strip() if h else None
         return None
+
+    def _restructure(self, req):
+        """Passages merged or split: the edition and the witness files change together, in one commit.
+        Nothing is written unless every file is as the page loaded it and every new text is sound."""
+        cfg = load_config(self.folder)
+        allowed = [cfg['edition']] + list(cfg.get('witnesses', []))
+        files = req.get('files')
+        if not isinstance(files, list) or not files:
+            return self._json({'ok': False, 'errors': ['no files to save']}, 400)
+        names = [f.get('file') if isinstance(f, dict) else None for f in files]
+        if any(n not in allowed for n in names) or len(set(names)) != len(names):
+            return self._json({'ok': False, 'errors': ['only the edition and witness files can be saved']}, 400)
+        if any(not isinstance(f.get('content'), str) for f in files):
+            return self._json({'ok': False, 'errors': ['no content to save']}, 400)
+        paths = {n: self._safe(n) for n in names}
+        changed = [f['file'] for f in files if str(os.stat(paths[f['file']]).st_mtime_ns) != str(f.get('baseMtime'))]
+        if changed:
+            return self._json({'ok': False, 'conflict': True, 'errors': [
+                f'{", ".join(changed)} changed on disk since you opened the section (perhaps in another editor). '
+                'Nothing was saved. Reload the page to pick up the new version.']}, 409)
+        remove = [str(b) for b in (req.get('removeAlignments') or [])]
+        errors = [e for f in files for e in check_xml(f['content'], f['file'])]
+        errors += [f'bad passage id {b!r}' for b in remove if not re.fullmatch(BLOCK_RE, b)]
+        if errors:
+            return self._json({'ok': False, 'errors': errors[:20]}, 422)
+
+        tmps = []
+        for f in files:
+            tmp = paths[f['file']].with_name(paths[f['file']].name + '.saving')
+            tmp.write_text(f['content'], encoding='utf-8', newline='')
+            tmps.append((tmp, paths[f['file']]))
+        for tmp, path in tmps:
+            os.replace(tmp, path)
+        written = list(names)
+        # the alignment files of passages that no longer exist, or whose text is now different
+        removed = []
+        if remove and cfg.get('writeAlignments', True):
+            adir = self._safe(cfg.get('alignmentsDir', 'alignments'))
+            for b in remove:
+                p = adir / f'{b}.xml'
+                if not p.is_file():
+                    continue
+                rel = os.path.relpath(p, self.folder)
+                tracked = git(self.folder, 'ls-files', '--error-unmatch', '--', rel)
+                p.unlink()
+                removed.append(rel)
+                if tracked and tracked.returncode == 0:
+                    written.append(rel)
+        commit = self._commit(written, req.get('message') or 'Passages merged or split via Saktumiva editor')
+        return self._json({'ok': True, 'mtimes': {n: str(os.stat(paths[n]).st_mtime_ns) for n in names},
+                           'written': names, 'removed': removed, 'commit': commit})
 
     def _save(self, req):
         cfg = load_config(self.folder)

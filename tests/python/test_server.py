@@ -168,3 +168,42 @@ def test_cli_does_not_reuse_an_older_copy(server, monkeypatch, capsys):
     cli.main(['--port', str(server.port), '--no-browser'])
     out = capsys.readouterr().out
     assert started and 'older copy' in out and '0.1.0' in out
+
+
+def test_restructure_writes_several_files_in_one_commit_or_none(server, sushruta):
+    folder = sushruta / '03-su.sa'
+    st, r = server.post('/api/open', {'folder': str(folder)})
+    assert st == 200, r
+    st, info = server.get('/api/config')
+    ed, wit = info['config']['edition'], info['config']['witnesses'][0]
+    hdr = {'X-Saktumiva-Folder': quote(info['folder'])}
+    texts = {f: (folder / f).read_text(encoding='utf-8') for f in (ed, wit)}
+    new = {f: t.replace('</TEI>', '<!-- changed --></TEI>') for f, t in texts.items()}
+    body = lambda content, mt=info['mtimes']: {  # noqa: E731
+        'files': [{'file': f, 'baseMtime': mt[f], 'content': content[f]} for f in (ed, wit)],
+        'removeAlignments': ['SS.3.1.1', 'SS.3.1.2', 'no.such.passage'], 'message': 'SS.3.1.1 + SS.3.1.2 merged'}
+
+    # one unsound file: nothing at all is written
+    bad = {ed: new[ed], wit: '<TEI><unclosed></TEI>'}
+    st, r = server.post('/api/restructure', body(bad), headers=hdr)
+    assert st == 422
+    assert (folder / ed).read_text(encoding='utf-8') == texts[ed] and (folder / 'alignments' / 'SS.3.1.1.xml').exists()
+    # one file changed on disk meanwhile: nothing is written
+    st, r = server.post('/api/restructure', body(new, {**info['mtimes'], wit: '1'}), headers=hdr)
+    assert st == 409 and r['conflict'] and wit in r['errors'][0]
+    assert (folder / ed).read_text(encoding='utf-8') == texts[ed]
+    # only the edition and the witnesses
+    st, r = server.post('/api/restructure', {'files': [{'file': 'editor.config.json', 'baseMtime': '1', 'content': '<TEI/>'}]}, headers=hdr)
+    assert st == 400
+
+    st, r = server.post('/api/restructure', body(new), headers=hdr)
+    assert st == 200 and r['commit'], r
+    assert set(r['mtimes']) == {ed, wit}
+    assert sorted(r['removed']) == ['alignments/SS.3.1.1.xml', 'alignments/SS.3.1.2.xml']
+    for f in (ed, wit):
+        assert (folder / f).read_bytes() == new[f].encode('utf-8')
+    assert not (folder / 'alignments' / 'SS.3.1.1.xml').exists() and (folder / 'alignments' / 'SS.3.4.96.xml').exists()
+    show = subprocess.run(['git', 'show', '--name-status', '--format=%s', 'HEAD'], cwd=sushruta, capture_output=True, text=True).stdout
+    assert show.startswith('SS.3.1.1 + SS.3.1.2 merged')
+    assert f'M\t03-su.sa/{ed}' in show and f'M\t03-su.sa/{wit}' in show and 'D\t03-su.sa/alignments/SS.3.1.1.xml' in show
+    assert subprocess.run(['git', 'status', '--porcelain'], cwd=sushruta, capture_output=True, text=True).stdout.strip() == ''

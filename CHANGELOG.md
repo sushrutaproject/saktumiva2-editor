@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+* **Merge passages.** With several passages shown that follow one another, **Merge…** (above the text) makes one
+  passage of them, under the `xml:id` of the first, in the edition and in every witness file. Only the tags between
+  the passages are removed: no text changes, and the rest of each file is left exactly as it is. Their notes go with
+  them. A witness that has only a later one of the passages has it relabelled; a witness in which the passages are
+  not side by side (another order, something in between) is reported, and nothing is merged until that is put right.
+* **Split a passage.** **Split…** (beside Add note) divides the passage shown in two. Click in the edition's text
+  where the second passage is to begin; each witness is then marked at the matching place, going by the alignment,
+  and shown so that the place can be checked and moved (click, or ‹ › « »). The two parts get the ids you give
+  (the first may keep the old one, or e.g. `SS.3.2.14` becomes `SS.3.2.14ab` and `SS.3.2.14cd`). Notes anchored in
+  the second part go with it. Markup that the cut goes through (`<l>`, `<unclear>` …) is closed and opened again.
+* Both are written to the files straight away, as one git commit, after a check that every file's text is letter for
+  letter what it was; if any file changed on disk meanwhile, or any result is unsound, nothing is written. They are
+  offered only when there are no unsaved changes, and Ctrl+Z does not undo them: revert the commit in git. The
+  alignment files of the passages concerned are removed and made afresh.
+
 ## 0.5.1 (9 November 2026)
 
 * **Check for updates works on macOS.** Python there does not read the Mac's keychain, so the ready-made Mac

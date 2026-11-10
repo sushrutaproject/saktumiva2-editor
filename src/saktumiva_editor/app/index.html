@@ -62,12 +62,14 @@
       </div>
       <div class="tools" id="multi-tools" hidden>
         <span class="muted">To edit, click a passage’s id</span>
+        <button id="btn-merge" title="Make one passage of the passages shown, in the edition and in every witness">Merge…</button>
         <button id="btn-single" title="Show only one passage again, with all the editing tools (Esc)">Show one passage</button>
       </div>
       <div class="tools" id="reading-tools">
         <button id="btn-edit" title="Edit the text of this passage (E)">Edit text</button>
         <button id="btn-source" title="Edit this passage as TEI XML">TEI source</button>
         <button id="btn-note" title="Add a note at the selected word (N)">Add note</button>
+        <button id="btn-split" title="Divide this passage in two, in the edition and in every witness">Split…</button>
       </div>
     </div>
 
@@ -158,6 +160,15 @@
     <button id="btn-pub-cancel">Cancel</button>
     <button id="btn-pub-start" class="primary">Publish</button>
     <button id="btn-pub-close" class="primary" hidden>Close</button>
+  </div>
+</dialog>
+
+<dialog id="restructure-dialog" class="wide">
+  <div id="rs-body"></div>
+  <p id="rs-error" class="error" hidden></p>
+  <div class="dialog-buttons"><span class="spacer"></span>
+    <button id="btn-rs-cancel">Cancel</button>
+    <button id="btn-rs-go" class="primary">Merge</button>
   </div>
 </dialog>
 

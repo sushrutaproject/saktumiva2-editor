@@ -7,6 +7,8 @@ import { setupMenu, checkForUpdates, showAbout } from './common.mjs';
 import { findStemmata, layoutTree, renderSVG, sigla as stemmaSigla } from './stemma.mjs';
 import { buildNexus } from './nexus.mjs';
 import { clickSelect, sortByDoc, selectionLabel, encodeSession, decodeSession } from './multi.mjs';
+import { mergeInFile, splitInFile, findPassage, textNodesOf, snapOffset, offsetPlace, offsetToCount,
+         alignedParts, locateParts, validId } from './restructure.mjs';
 
 // ================================================================ helpers
 const $ = (s, r = document) => r.querySelector(s);
@@ -1624,6 +1626,251 @@ function applySource() {
   toast('Passage updated. Undo with Ctrl+Z.');
 }
 
+// ================================================================ merging and splitting passages
+// Both change the edition and every witness file together and are saved straight away, as one git commit
+// (like a correction to a witness). There is nothing left to undo in the page, so they wait until all is saved.
+function restructureReady() {
+  if (S.mode !== 'read') { toast('Finish or cancel the current edit first.', true); return false; }
+  if (S.log.length) { toast('Save your changes first: merging and splitting rewrite the edition and the witness files straight away.', true, 7000); return false; }
+  if (S.badFiles.some(b => (S.cfg.witnesses || []).includes(b.file))) {
+    toast(`Not possible while a witness file cannot be read (${S.badFiles.map(b => b.file).join(', ')}): its passages would be left behind.`, true, 9000); return false; }
+  return true;
+}
+const sectionFiles = () => [
+  {file: S.editionFile, raw: S.raw, doc: S.origDoc, span: S.span, mtime: S.mtime, edition: true, siglum: S.collator.siglum, title: 'the edition'},
+  ...S.witnesses.map(w => ({file: w.file, raw: w.raw, doc: w.doc, span: w.span, mtime: w.mtime, siglum: w.siglum, title: w.title, w}))];
+const onFiles = fn => sectionFiles().map(f => { try { return {f, res: fn(f)}; } catch (e) { return {f, error: e.message}; } });
+const filesReport = rows => h('table', {}, ...rows.map(r => h('tr', {'data-file': r.f.file, 'data-status': r.error ? 'error' : r.res.status},
+  h('td', {class: 'sig'}, r.f.siglum), h('td', {class: 'muted'}, r.f.file),
+  h('td', {class: r.error ? 'error' : r.res.status === 'unchanged' ? 'muted' : ''}, r.error ? `Cannot be done: ${r.error}.` : r.res.why))));
+const wayBack = () => h('p', {class: 'muted'}, 'This is written to the files straight away',
+  S.gitOn ? ', as one git commit. Ctrl+Z does not undo it: to go back, revert that commit in git.'
+          : '. This folder is not under git, so there is no way back: make a copy of the folder first.',
+  S.cfg.alignmentsDir && S.cfg.writeAlignments !== false ? ' The alignment files of these passages are replaced by fresh collations.' : '');
+let rsGo = null;
+function restructureDialog(action, ...content) {
+  $('#rs-body').replaceChildren(...content.filter(Boolean));
+  $('#rs-error').hidden = true;
+  $('#btn-rs-go').textContent = action; $('#btn-rs-go').disabled = false;
+  if (!$('#restructure-dialog').open) $('#restructure-dialog').showModal();
+}
+const rsError = msg => { const e = $('#rs-error'); e.textContent = msg; e.hidden = !msg; };
+async function correctedAlignments(ids) {
+  if (!S.cfg.alignmentsDir) return [];
+  await Promise.all(ids.map(alignFileText));
+  return ids.filter(fileIsCorrected);
+}
+// Write the new files, then take them as what is on disk (as after Save and after a witness correction).
+// `gone`: passages that no longer exist; `fresh`: passages whose text is new and must be collated again.
+async function commitRestructure(rows, {gone, fresh, message}) {
+  const changed = rows.filter(r => r.res.content !== r.f.raw);
+  const writeAl = !!S.cfg.alignmentsDir && S.cfg.writeAlignments !== false;
+  $('#btn-rs-go').disabled = true;
+  let resp;
+  try {
+    resp = await (await apiFetch('/api/restructure', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({files: changed.map(r => ({file: r.f.file, baseMtime: r.f.mtime, content: r.res.content})),
+                            removeAlignments: writeAl ? [...new Set([...gone, ...fresh])] : [], message})})).json();
+  } catch (e) { resp = {ok: false, errors: ['the local server did not answer. Is it still running?']}; }
+  $('#btn-rs-go').disabled = false;
+  if (!resp.ok) { rsError('Nothing was changed: ' + (resp.errors || []).join(' ')); return null; }
+  for (const r of changed) {
+    const mtime = resp.mtimes[r.f.file];
+    S.mtimes[r.f.file] = mtime;
+    if (r.f.edition) {
+      S.raw = r.res.content; S.mtime = mtime; S.origDoc = r.res.doc; S.span = scanRaw(S.raw);
+      S.doc = S.origDoc.cloneNode(true);
+      assignKeys(S.doc);
+      S.collator.setEdition(S.doc);
+      S.undo = []; S.redo = []; S.log = [];
+      S.baseProblems = new Set(noteProblems(S.origDoc));
+    } else {
+      const w = r.f.w;
+      w.raw = r.res.content; w.mtime = mtime; w.span = scanRaw(w.raw); w.doc = r.res.doc;
+      S.collator.setFile(w.file, w.doc);
+    }
+  }
+  S.chapter = new Map();
+  reindex();
+  rememberOriginal();
+  for (const id of [...gone, ...fresh]) {
+    S.results.delete(id); S.forceFresh.delete(id); S.pendingAlign.delete(id);
+    if (writeAl) S.alignFile.set(id, null); else S.alignFile.delete(id);
+  }
+  if (writeAl) for (const id of fresh) S.pendingAlign.add(id);
+  $('#restructure-dialog').close();
+  return resp;
+}
+
+// ---------------------------------------------------------------- merge the passages shown
+async function openMerge() {
+  if (!restructureReady()) return;
+  const ids = [...S.selection];
+  if (ids.length < 2) { toast('Show the passages to merge first (Shift-click in the passage list).'); return; }
+  const i0 = S.blocks.indexOf(ids[0]);
+  if (!ids.every((id, k) => S.blocks[i0 + k] === id)) { toast('Only passages that follow one another can be merged. Shift-click selects such a run.', true, 7000); return; }
+  const keep = ids[0];
+  const rows = onFiles(f => mergeInFile({...f, ids, name: f.file}));
+  const corrected = await correctedAlignments(ids);
+  const warnings = [...new Set(rows.flatMap(r => r.res?.warnings || []))];
+  const bad = rows.some(r => r.error);
+  restructureDialog('Merge',
+    h('h3', {}, `Merge ${ids.length} passages into ${keep}`),
+    h('p', {}, `The text of ${selectionLabel(ids, S.blocks)} becomes one passage with the xml:id `, h('b', {}, keep),
+      ', in the edition and in every witness that has these passages. Their notes go with them. No text is changed: only the tags between the passages are removed.'),
+    filesReport(rows),
+    bad ? h('p', {class: 'error'}, 'Nothing can be merged until the files marked above are put right (for instance with a witness’s “edit”, or in your XML editor); then reload this page.') : null,
+    warnings.length ? h('ul', {}, ...warnings.map(w => h('li', {}, w))) : null,
+    corrected.length ? h('p', {class: 'error'}, `The alignment of ${corrected.join(', ')} was corrected by hand. It will be replaced by a fresh collation of the merged passage (the corrected one stays in git history).`) : null,
+    wayBack());
+  $('#btn-rs-go').disabled = bad;
+  rsGo = async () => {
+    const resp = await commitRestructure(rows, {gone: ids.slice(1), fresh: [keep], message: `Passages ${ids.join(', ')} merged into ${keep}`});
+    if (!resp) return;
+    S.selection = [keep]; S.current = keep;
+    renderList(); openPassage(keep); updateStatus();
+    toast(`Merged into ${keep}: ${resp.written.length} file(s) changed${resp.commit ? ` — git commit ${resp.commit}` : ''}.`, false, 7000);
+    flushAlignments();
+  };
+}
+
+// ---------------------------------------------------------------- split the passage shown
+// The place is chosen in the edition's text; the alignment then says where that falls in each witness.
+// Every witness is shown so that its place can be checked and moved.
+let SP = null;   // {id, rows: [{f, el, text, offset, manual, guess}]}
+function openSplit() {
+  if (!restructureReady()) return;
+  if (isMulti()) { needOne(); return; }
+  const id = S.current;
+  const rows = sectionFiles().map(f => ({f, el: findPassage(f.doc, id)})).filter(r => r.el)
+    .map(r => ({...r, text: textNodesOf(r.el).map(t => t.data).join(''), offset: null, manual: false, guess: ''}));
+  if (!rows.length || !rows[0].f.edition) return;
+  if (!rows[0].text.trim()) { toast('This passage has no text to split.', true); return; }
+  // start from the word last clicked or selected in the text, if any
+  let start = null;
+  const pt = teiPointFromSelection(), nodes = textNodesOf(S.byId.get(id));
+  if (pt && nodes.includes(pt.node)) start = nodes.slice(0, nodes.indexOf(pt.node)).reduce((a, t) => a + t.data.length, 0) + pt.offset;
+  SP = {id, rows, list: h('div', {id: 'sp-rows'})};
+  const first = h('input', {id: 'sp-first', value: id, spellcheck: 'false'}), second = h('input', {id: 'sp-second', value: id + 'b', spellcheck: 'false'});
+  restructureDialog('Split',
+    h('h3', {}, `Split ${id} in two`),
+    h('p', {}, 'Click in the text of the edition where the second passage is to begin. Each witness is then marked at the matching place, going by the alignment: ',
+      'check them, and click in a witness (or use ‹ ›, « » for a word) to move its mark. The shaded text becomes the second passage. ',
+      'A witness marked at its very beginning or end keeps its text whole, in the second or the first passage.'),
+    h('div', {class: 'ids'}, h('label', {}, 'xml:id of the first part', first), h('label', {}, 'xml:id of the second part', second)),
+    SP.list, wayBack());
+  if (start !== null && offsetPlace(rows[0].el, snapOffset(rows[0].el, start)) === 'inside') setSplitOffset(rows[0], start);
+  else renderSplit();
+  correctedAlignments([id]).then(c => { if (c.length && SP?.id === id) SP.list.after(h('p', {class: 'error'},
+    `The alignment of ${id} was corrected by hand. It will be replaced by fresh collations of the two parts (the corrected one stays in git history).`)); });
+  rsGo = runSplit;
+}
+function setSplitOffset(row, offset, manual = false) {
+  row.offset = snapOffset(row.el, offset);
+  if (row.f.edition) suggestSplit(); else { row.manual = manual; row.guess = ''; }
+  renderSplit();
+}
+function suggestSplit() {
+  const ed = SP.rows[0], ignore = new Set(S.collator.ignore);
+  let parts = new Map();
+  const r = S.results.get(SP.id);
+  if (r?.res.alignXML && r.hash === serializeEl(S.byId.get(SP.id))) {
+    try { parts = alignedParts(r.res.alignXML, S.collator.siglum, offsetToCount(ed.el, ed.offset, ignore)); } catch (e) { console.warn('no suggestion from the alignment', e); }
+  }
+  for (const row of SP.rows.slice(1)) {
+    if (row.manual) continue;
+    // a witness with corrections has two rows in the alignment (Kac, Kpc): its corrected text is followed
+    const part = [row.f.siglum, row.f.siglum + 'pc', row.f.siglum + 'ac'].map(k => parts.get(k)).find(Boolean);
+    const at = part ? locateParts(row.el, part, ignore) : null;
+    if (at) { row.offset = at.offset; row.guess = at.sure ? 'by the alignment' : 'by the alignment — please check'; }
+    else {   // no alignment to go by: the same proportion of the text, at the next word
+      let o = Math.round(row.text.length * ed.offset / Math.max(1, ed.text.length));
+      while (o < row.text.length && /\S/.test(row.text[o])) o++;
+      row.offset = snapOffset(row.el, o); row.guess = 'a rough guess (no alignment): please check';
+    }
+  }
+}
+function splitNudge(row, kind) {
+  const s = row.text; let o = row.offset ?? 0;
+  if (kind === 'char-') { o--; while (o > 0 && /\s/.test(s[o])) o--; }
+  if (kind === 'char+') o++;
+  if (kind === 'word-') { o--; while (o > 0 && /\s/.test(s[o])) o--; while (o > 0 && /\S/.test(s[o - 1])) o--; }
+  if (kind === 'word+') { while (o < s.length && /\S/.test(s[o])) o++; }
+  setSplitOffset(row, Math.max(0, o), true);
+}
+function splitText(row) {
+  const box = h('div', {class: 'sptext'}), starts = new Map();
+  let flat = 0, placed = row.offset === null;
+  const mark = () => h('span', {class: 'split-mark', title: 'the second passage begins here'});
+  const put = (into, text, start) => {
+    if (!text) return;
+    const t = document.createTextNode(text); starts.set(t, start);
+    into.append(row.offset !== null && start >= row.offset ? h('span', {class: 'part2'}, t) : t);
+  };
+  const walk = (n, into) => {
+    for (const c of n.childNodes) {
+      if (c.nodeType === 3) {
+        const a = flat; flat += c.data.length;
+        if (!placed && row.offset >= a && row.offset < flat) {
+          put(into, c.data.slice(0, row.offset - a), a); into.append(mark()); placed = true; put(into, c.data.slice(row.offset - a), row.offset);
+        } else put(into, c.data, a);
+      } else if (c.nodeType === 1) {
+        const name = c.localName;
+        if (name in CHIP) { into.append(h('span', {class: `chip ${name}`, 'data-label': CHIP[name](c) || (name === 'anchor' ? '•' : '')})); continue; }
+        const el = ['lg', 'l', 'p'].includes(name) || MUTED.has(name) ? h('div', {class: name}) : h('span', {class: SPANCLASS[name] || `tei-${name}`});
+        walk(c, el); into.append(el);
+      }
+    }
+  };
+  walk(row.el, box);
+  if (!placed) box.append(mark());
+  box.addEventListener('click', e => {
+    const pos = document.caretPositionFromPoint ? document.caretPositionFromPoint(e.clientX, e.clientY) : null;
+    const rng = !pos && document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
+    const node = pos ? pos.offsetNode : rng?.startContainer, off = pos ? pos.offset : rng?.startOffset;
+    if (node && starts.has(node)) setSplitOffset(row, starts.get(node) + off, true);
+  });
+  return box;
+}
+function renderSplit() {
+  const ed = SP.rows[0];
+  SP.list.replaceChildren(...SP.rows.map((row, i) => {
+    if (i && ed.offset === null) return null;
+    const place = row.offset === null ? null : offsetPlace(row.el, row.offset);
+    const where = row.offset === null ? 'click where the second passage begins'
+      : place === 'start' ? 'all of this goes to the second passage' : place === 'end' ? 'all of this stays in the first passage' : row.guess;
+    const nudge = (label, kind, title) => h('button', {title, disabled: row.offset === null, onclick: () => splitNudge(row, kind)}, label);
+    return h('div', {class: 'sprow' + (i ? '' : ' edition'), 'data-siglum': row.f.siglum},
+      h('div', {class: 'sphead'}, h('span', {class: 'wsig sig'}, row.f.siglum), h('span', {class: 'wtitle', title: row.f.title}, i ? row.f.title : 'the edition'),
+        h('span', {class: 'spacer'}), h('span', {class: 'spwhere'}, where),
+        nudge('«', 'word-', 'A word earlier'), nudge('‹', 'char-', 'A letter earlier'), nudge('›', 'char+', 'A letter later'), nudge('»', 'word+', 'A word later')),
+      splitText(row));
+  }));
+  const missing = S.witnesses.filter(w => !SP.rows.some(r => r.f.w === w)).map(w => w.siglum);
+  if (missing.length) SP.list.append(h('p', {class: 'muted'}, `Not in ${missing.join(', ')}.`));
+  rsError('');
+}
+async function runSplit() {
+  const {id} = SP, ed = SP.rows[0];
+  const firstId = nfc($('#sp-first').value.trim()), secondId = nfc($('#sp-second').value.trim());
+  if (ed.offset === null) { rsError('Click in the text of the edition where the second passage is to begin.'); return; }
+  for (const n of [firstId, secondId]) if (!validId(n)) { rsError(`“${n}” cannot be an xml:id: use letters, digits, full stops, hyphens and underscores, beginning with a letter.`); return; }
+  const offsets = new Map(SP.rows.map(r => [r.f.file, r.offset]));
+  const rows = onFiles(f => splitInFile({...f, id, firstId, secondId, offset: offsets.get(f.file), name: f.file}));
+  const bad = rows.filter(r => r.error);
+  if (bad.length) { rsError('Nothing was changed. ' + bad.map(r => `${r.f.siglum} (${r.f.file}): ${r.error}.`).join(' ')); return; }
+  const warnings = [...new Set(rows.flatMap(r => r.res.warnings))];
+  const resp = await commitRestructure(rows, {gone: firstId === id ? [] : [id], fresh: [firstId, secondId],
+    message: `Passage ${id} split into ${firstId} and ${secondId}`});
+  if (!resp) return;
+  SP = null;
+  S.selection = [firstId]; S.current = firstId;
+  renderList(); showSeveral([firstId, secondId], firstId); updateStatus();
+  toast(`${id} is now ${firstId} and ${secondId}: ${resp.written.length} file(s) changed${resp.commit ? ` — git commit ${resp.commit}` : ''}.`
+    + (warnings.length ? ' Note: ' + warnings.join('; ') : ''), false, warnings.length ? 12000 : 7000);
+  flushAlignments();
+}
+
 // ================================================================ saving
 function buildRaw() {
   const edits = [];
@@ -2181,6 +2428,11 @@ $('#btn-redo').addEventListener('click', doRedo);
 $('#filter').addEventListener('input', () => renderList());
 $('#btn-several').addEventListener('click', () => setSeveral(!S.several));
 $('#btn-single').addEventListener('click', () => openPassage(S.current));
+$('#btn-merge').addEventListener('click', openMerge);
+$('#btn-split').addEventListener('click', openSplit);
+$('#btn-rs-cancel').addEventListener('click', () => $('#restructure-dialog').close());
+$('#btn-rs-go').addEventListener('click', () => rsGo?.());
+$('#restructure-dialog').addEventListener('close', () => { SP = null; rsGo = null; });
 $('#passage').addEventListener('dblclick', e => { if (S.mode === 'read' && !e.target.closest('.chip')) { window.getSelection().removeAllRanges(); startEdit(); } });
 
 document.addEventListener('keydown', e => {
@@ -2209,4 +2461,5 @@ load().catch(e => {
 });
 
 // expose for testing in the browser console
-window.__editor = {S, save, buildRaw, showSeveral, openPassage, get AL() { return AL; }};
+window.__editor = {S, save, buildRaw, showSeveral, openPassage, get AL() { return AL; },
+  get SP() { return SP; }, setSplitOffset};

@@ -295,3 +295,25 @@ button.mopen:hover { background: var(--accent-soft); }
 .wit .wseg + .wseg { margin-top: 4px; }
 .wit .wseg .wid { font-size: 11px; padding: 0 6px; margin-bottom: 1px; }
 .wit .wcount { font-size: 12px; }
+
+/* merging and splitting passages */
+#restructure-dialog { max-height: 92vh; overflow-y: auto; }
+#restructure-dialog table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
+#restructure-dialog td { border-top: 1px solid var(--line); padding: 4px 8px 4px 0; vertical-align: top; }
+#restructure-dialog td.sig { white-space: nowrap; }
+#restructure-dialog ul { margin: 6px 0; padding-left: 20px; font-size: 13px; }
+#restructure-dialog .ids { display: flex; gap: 16px; }
+#restructure-dialog .ids label { flex: 1; }
+.sprow { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 8px; margin-top: 8px; background: var(--panel); }
+.sprow.edition { border-color: var(--accent); }
+.sprow .sphead { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.sprow .sphead .wtitle { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.sprow .sphead button { padding: 0 7px; font-size: 13px; line-height: 20px; }
+.sprow .spwhere { color: var(--accent); white-space: nowrap; }
+.sptext { font: 15px/1.6 var(--serif); cursor: text; margin-top: 4px; }
+.sptext .trailer, .sptext .label, .sptext .head, .sptext .note { font: 12px var(--sans); color: var(--muted); }
+.sptext .part2 { background: var(--accent-soft); }
+.split-mark { display: inline-block; width: 0; height: 1.2em; vertical-align: text-bottom; border-left: 3px solid var(--accent); margin: 0 2px; }
+.sptext .tei-del { text-decoration: line-through; color: var(--bad); }
+.sptext .tei-add { color: var(--ok); }
+#restructure-dialog .dialog-buttons { position: sticky; bottom: -18px; background: var(--panel); padding: 10px 0 18px; margin-bottom: -18px; }

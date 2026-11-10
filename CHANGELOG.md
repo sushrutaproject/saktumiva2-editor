@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 (10 November 2026)
+
+* On Windows, the alignment files removed when passages are merged or split are now reported with forward
+  slashes, as everywhere else. Merging and splitting themselves already worked on Windows; only the editor's own
+  test of them failed there.
+* The Saktumiva code inside the editor is updated to its latest version (`132a83e`). Upstream this adds a licence,
+  documentation and a roadmap; the collation code is unchanged, and the editor's collations and apparatus come out
+  the same.
+
 ## 0.6.0 (10 November 2026)
 
 * **Merge passages.** With several passages shown that follow one another, **Merge…** (above the text) makes one

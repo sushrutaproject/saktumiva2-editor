@@ -488,7 +488,7 @@ class Handler(SimpleHTTPRequestHandler):
                 p = adir / f'{b}.xml'
                 if not p.is_file():
                     continue
-                rel = os.path.relpath(p, self.folder)
+                rel = Path(os.path.relpath(p, self.folder)).as_posix()   # forward slashes on Windows too
                 tracked = git(self.folder, 'ls-files', '--error-unmatch', '--', rel)
                 p.unlink()
                 removed.append(rel)

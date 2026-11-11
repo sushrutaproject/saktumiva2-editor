@@ -169,7 +169,7 @@ dialog textarea { font: 15px/1.5 var(--serif); }
 .al-line { border-collapse: separate; border-spacing: 0; margin: 0 0 14px; font-family: var(--serif); font-size: 15px; }
 .al-line th.sig { font: 600 12px var(--sans); color: var(--accent); text-align: right; padding: 2px 8px 2px 0; position: sticky; left: 0; background: var(--bg); }
 .al-line td { padding: 3px 14px 3px 10px; border-left: 1px solid var(--line); white-space: nowrap; position: relative; vertical-align: middle; }
-.al-line tr.base td { font-weight: 600; }
+/* the edition's row in normal weight, so its letters line up visually with the witnesses' */
 .al-line td.diff { background: var(--accent-soft); }
 .al-line td.empty { color: var(--line); }
 .al-line thead td { font: 11px var(--sans); color: var(--muted); border-left: 1px solid var(--line); padding: 0 4px 2px 10px; white-space: nowrap; }

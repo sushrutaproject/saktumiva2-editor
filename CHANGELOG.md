@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Correct alignment: the edition's row is no longer in bold, so its letters line up visually with the witnesses'.
+
 * "Variants to leave out of the apparatus" now always work. Readings that differ from the lemma only by the
   selected normalizations were sometimes still listed as variants, e.g. *garbbha-* / *garbha-*, *prādurbbhāvaḥ* /
   *prādurbhāvaḥ*, *śiraḥśuddhyartham* / *-arthaṃ*, *śoṇitārśassu* / *-ārśaḥsu*. The normalized forms that an

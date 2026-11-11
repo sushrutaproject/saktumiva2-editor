@@ -77,7 +77,7 @@ def test_patch_must_match_exactly_once():
     assert text == 'nothing to patch here' and problems
     once = 'x; if(newstr === lemma) { y'
     text, problems = patches.apply('lib/apparatus.mjs', once)
-    assert not problems and 'opts.equivalent(id, newstr, lemma)' in text
+    assert not problems and 'opts.equivalent(id, newstr, lemma, trimmed, lemmatrimmed)' in text
     _, problems = patches.apply('lib/apparatus.mjs', once + once)
     assert problems
 

@@ -260,12 +260,20 @@ export class Collator {
       const fns = (this.witRules.get(file) || []).map(r => r.fn).filter(Boolean);
       if (fns.length) perWit.set(name, s => fns.reduce((t, fn) => fn(t), s));
     }
-    if (!extra.length && !pairs.length && !perWit.size) return undefined;
-    return (id, a, b) => {
+    // The normalized forms stored in an alignment (its lemma attributes) are worked out for the whole text and
+    // then divided among the cells, which does not always come out right: a geminate deleted by one filter while
+    // another changes a neighbouring letter (garbbha: b|bha becomes v|bha, not |bha), or a change that depends on
+    // the next word. So also normalize the two readings' own text afresh, with all the selected normalizations.
+    const all = this.filtersindices;
+    const fresh = s => applyPairs(all.length ? filterAll(s, all)[0] : s, pairs);
+    return (id, a, b, rawA, rawB) => {
       const x = common(a), y = common(b);
       if (x === y) return true;
       const f = perWit.get(id);
-      return !!f && f(x) === f(y);
+      if (f && f(x) === f(y)) return true;
+      if (rawA == null || rawB == null) return false;
+      const u = fresh(rawA.trim()), v = fresh(rawB.trim());
+      return u === v || (!!f && f(u) === f(v));
     };
   }
 

@@ -3,9 +3,9 @@
   "patches": [
     {
       "file": "lib/apparatus.mjs",
-      "why": "opts.equivalent: per-witness equivalences (scriptNote rules, 'same letters', normalizations added after alignment) when deciding whether a reading agrees with the lemma",
+      "why": "opts.equivalent: per-witness equivalences (scriptNote rules, 'same letters', normalizations added after alignment) and a re-check of the readings' own text against the normalizations, when deciding whether a reading agrees with the lemma",
       "find": "if\\s*\\(\\s*newstr\\s*===\\s*lemma\\s*\\)\\s*\\{",
-      "replace": "/* [Saktumiva editor] opts.equivalent */ if(newstr === lemma || (opts.equivalent && opts.equivalent(id, newstr, lemma))) {"
+      "replace": "/* [Saktumiva editor] opts.equivalent */ if(newstr === lemma || (opts.equivalent && opts.equivalent(id, newstr, lemma, trimmed, lemmatrimmed))) {"
     }
   ]
 }

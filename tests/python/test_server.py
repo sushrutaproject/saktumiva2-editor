@@ -105,7 +105,7 @@ def test_project_and_browse_api(server, rasendra):
 
 def test_serves_patched_saktumiva_and_nothing_else_of_it(server):
     st, body = server.get('/saktumiva/lib/apparatus.mjs')
-    assert st == 200 and b'opts.equivalent(id, newstr, lemma)' in body
+    assert st == 200 and b'opts.equivalent(id, newstr, lemma, trimmed, lemmatrimmed)' in body
     st, _ = server.get('/saktumiva/editmode/openseadragon/openseadragon.min.mjs')
     assert st == 200
     st, _ = server.get('/saktumiva/readme.md')

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+* "Variants to leave out of the apparatus" now always work. Readings that differ from the lemma only by the
+  selected normalizations were sometimes still listed as variants, e.g. *garbbha-* / *garbha-*, *prādurbbhāvaḥ* /
+  *prādurbhāvaḥ*, *śiraḥśuddhyartham* / *-arthaṃ*, *śoṇitārśassu* / *-ārśaḥsu*. The normalized forms that an
+  alignment stores for each cell do not always come out right (for instance when one normalization removes a
+  geminate while another changes the neighbouring letter, or when a normalization depends on the next word), so
+  the editor now also checks the two readings' own text against all the selected normalizations. This applies to
+  existing alignment files too; Publish again to update the website file.
+
 ## 0.6.1 (10 November 2026)
 
 * On Windows, the alignment files removed when passages are merged or split are now reported with forward

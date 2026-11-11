@@ -217,7 +217,7 @@ saktumiva-editor
 
 ```bash
 python -m pytest                     # the server, configuration, update check
-cd tests/js && npm ci && node --test # the collation regression tests (Node 22)
+cd tests/js && npm ci && npm test   # the collation regression tests (Node 22)
 ```
 
 The browser tests (`tests/python/test_browser_several.py`: choosing several passages, the combined apparatus,

@@ -21,7 +21,8 @@ jobs:
           cache-dependency-path: tests/js/package-lock.json
       - run: npm ci
         working-directory: tests/js
-      - run: node --test
+      # one test file at a time: the files share the built copy of the app in tests/js/.build
+      - run: node --test --test-concurrency=1
         working-directory: tests/js
 
   python:

@@ -1,9 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.6.2 (11 November 2026)
 
 * Correct alignment: the edition's row is no longer in bold, so its letters line up visually with the witnesses'.
-
 * "Variants to leave out of the apparatus" now always work. Readings that differ from the lemma only by the
   selected normalizations were sometimes still listed as variants, e.g. *garbbha-* / *garbha-*, *prādurbbhāvaḥ* /
   *prādurbhāvaḥ*, *śiraḥśuddhyartham* / *-arthaṃ*, *śoṇitārśassu* / *-ārśaḥsu*. The normalized forms that an
@@ -11,6 +10,7 @@
   geminate while another changes the neighbouring letter, or when a normalization depends on the next word), so
   the editor now also checks the two readings' own text against all the selected normalizations. This applies to
   existing alignment files too; Publish again to update the website file.
+* The collation tests now run one test file at a time (they share one built copy of the app).
 
 ## 0.6.1 (10 November 2026)
 

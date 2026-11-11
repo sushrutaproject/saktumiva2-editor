@@ -68,7 +68,7 @@ jobs:
           ./dist/saktumiva-editor --version
           ./dist/saktumiva-editor --no-browser --port 8899 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:8899/api/state && break; sleep 1; done
-          curl -sf http://127.0.0.1:8899/saktumiva/lib/apparatus.mjs | grep -q "opts.equivalent(id, newstr, lemma)"
+          curl -sf http://127.0.0.1:8899/saktumiva/lib/apparatus.mjs | grep -q "opts.equivalent(id, newstr, lemma"
           kill %1 || true
       - name: Package (Linux, macOS)
         if: runner.os != 'Windows'

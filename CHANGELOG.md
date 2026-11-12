@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.3 (12 November 2026)
 
 * Apparatus: each entry has a **↑ text** button (shown when you point at the entry, or on the entry you jumped
   to) that scrolls back to its lemma in the text, which stays highlighted.

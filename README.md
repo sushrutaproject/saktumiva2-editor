@@ -3,7 +3,7 @@
 New to Saktumiva, TEI or GitHub? Start with the [tutorial](docs/tutorial.md).
 
 A local editing screen for critical editions in TEI, collated with Charles Li's
-[Saktumiva](https://github.com/chchch/saktumiva). Saktumiva's own collation code runs in the
+[Saktumiva](https://github.com/chchch/saktumiva) v.2. Saktumiva's own collation code runs in the
 background; your decisions are written straight back into the TEI files. Everything runs on your
 own computer. The only outside traffic is your browser fetching manuscript images from the archives'
 IIIF servers, and "Check for updates" asking GitHub for the latest release.

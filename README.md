@@ -1,5 +1,7 @@
 # Saktumiva editor
 
+New to Saktumiva, TEI or GitHub? Start with the [tutorial](docs/tutorial.md).
+
 A local editing screen for critical editions in TEI, collated with Charles Li's
 [Saktumiva](https://github.com/chchch/saktumiva). Saktumiva's own collation code runs in the
 background; your decisions are written straight back into the TEI files. Everything runs on your
@@ -12,7 +14,6 @@ and works for any project laid out as folders of TEI files, for example the
 
 ![Screenshot of the editor](https://github.com/user-attachments/assets/315f60d2-1ced-475c-b555-e36c4bdcc09a)
 
-New to Saktumiva, TEI or GitHub? Start with the [tutorial](docs/tutorial.md).
 
 ## Install
 

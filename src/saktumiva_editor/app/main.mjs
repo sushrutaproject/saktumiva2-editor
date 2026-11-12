@@ -715,7 +715,18 @@ function renderApp(app, i, pid) {
     }
   }
   if (minor.length && S.cfg.apparatus?.showMinor !== false) div.append(h('div', {class: 'minor'}, 'minor: ', ...minor.map(r => renderRdg(r, r.getAttribute('wit'), i, true, pid))));
+  div.append(h('button', {class: 'totext', title: 'Back to this place in the text', 'aria-label': 'Back to the text',
+    onclick: e => { e.stopPropagation(); showInText(key); }}, '↑ text'));
   return div;
+}
+
+// from an apparatus entry back to its lemma in the text
+function showInText(key) {
+  const entry = S.appRanges.find(a => a.key === key);
+  const hr = entry && toHtmlRange(entry.range);
+  if (focused !== key) focusApp(key, true);
+  const el = hr && (hr.startContainer.nodeType === 1 ? hr.startContainer : hr.startContainer.parentElement);
+  (el || document.querySelector('#passage'))?.scrollIntoView({block: 'center', behavior: 'smooth'});
 }
 
 function renderRdg(rdg, wits, appIndex, small = false, pid = S.current) {

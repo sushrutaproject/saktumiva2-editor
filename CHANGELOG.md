@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+* Apparatus: each entry has a **↑ text** button (shown when you point at the entry, or on the entry you jumped
+  to) that scrolls back to its lemma in the text, which stays highlighted.
+
 ## 0.6.2 (11 November 2026)
 
 * Correct alignment: the edition's row is no longer in bold, so its letters line up visually with the witnesses'.

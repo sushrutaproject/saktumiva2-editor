@@ -168,7 +168,7 @@ online until you push. Work cycle: edit → Publish → check the published file
     `<text>` in your files, with counts; anything else can be typed in.
   * *Alignment*: tokenization, scoring, distance function. Changing these means passages
     are collated again (for the whole Śārīrasthāna of the Suśrutasaṃhitā, about 5 minutes), except those you corrected by hand.
-  Applying settings reloads the editor; save your changes first.
+    Applying settings reloads the editor; save your changes first.
 * **Save** (Ctrl+S) writes only the passages and notes you changed, keeps the file's own
   formatting elsewhere, writes the passage's alignment file to `alignments/`, and makes a git commit
   listing your edits. Undo (Ctrl+Z) works until you save; after that, use git (History button).
@@ -180,7 +180,7 @@ are reported before saving.
 
 ## Not yet possible
 
-* Splitting or merging passages (new `xml:id`s).
+* ~~Splitting or merging passages (new `xml:id`s).~~
 * Carrying hand corrections of an alignment over when the passage's text later changes: the editor
   then warns you, collates afresh, and asks before replacing the corrected file (the old one stays in git).
 * Devanāgarī display.

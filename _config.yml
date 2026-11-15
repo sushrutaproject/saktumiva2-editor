@@ -1,0 +1,49 @@
+# GitHub Pages settings for sushrutaproject.github.io/saktumiva2-editor
+# The web pages are README.md and docs/tutorial.md, shown with
+# _layouts/default.html and assets/css/site.css in the style of the
+# Suśruta Project websites.
+title: Saktumiva editor
+description: A local editing screen for critical editions in TEI, collated with Charles Li's Saktumiva
+lang: en
+repo: sushrutaproject/saktumiva2-editor
+licence: "Free software under the GNU General Public License, version 3."
+
+plugins:
+  - jekyll-seo-tag
+
+# The shared Suśruta Project menu (as in sushrutaproject.github.io/_data/navigation.yml)
+project_nav:
+  - title: Home
+    url: https://sushrutaproject.github.io/
+  - title: Translation
+    url: https://github.com/sushrutaproject1/Sushrutasamhita_Saktumiva1/raw/main/translation/incremental_SS_Translation.pdf?raw=true
+  - title: Edition
+    url: https://sushrutaproject1.github.io/Sushrutasamhita_Saktumiva2/
+  - title: Project 1
+    url: https://sushrutaproject1.github.io/
+  - title: Project 2
+    url: https://sushrutaproject2.github.io/
+  - title: Blog
+    url: https://sushrutaproject2.github.io/blog/
+
+# The editor's own links
+tool_nav:
+  - title: Overview
+    url: /
+  - title: Tutorial
+    url: /docs/tutorial.html
+  - title: Install
+    url: /#install
+  - title: Download
+    url: https://github.com/sushrutaproject/saktumiva2-editor/releases/latest
+  - title: GitHub
+    url: https://github.com/sushrutaproject/saktumiva2-editor
+
+# Program sources: not part of the website
+exclude:
+  - src
+  - tests
+  - packaging
+  - pyproject.toml
+  - MANIFEST.in
+  - LICENSE

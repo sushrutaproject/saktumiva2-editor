@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.4 (18 November 2026)
+## 0.6.5 (18 November 2026)
 
 * **A hand-corrected alignment is no longer set aside when a witness has scribal corrections.** A witness with an
   `<add>` or `<del>` in the passage is collated as two rows, e.g. *Hac* and *Hpc*. Before using a saved alignment
@@ -20,6 +20,10 @@
   view does not move at all if the entry can already be seen.
 * Where one lemma follows another without a space (two parts of a compound, as after splitting a column in
   "Correct alignment"), a click on the first letter of the second one now finds the second, not the first.
+
+## 0.6.4 (17 November 2026)
+
+* No changes to the editor: a release made only to start archiving at Zenodo. It has no ready-made programs.
 
 ## 0.6.3 (12 November 2026)
 

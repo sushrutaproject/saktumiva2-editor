@@ -1,6 +1,6 @@
 import { TEI_NS, KEY_ATTR, parseXML, xmlid, serializeEl, scanRaw, rangeFromCoords,
          collapseWithMap, mergeText, describeChange, patchElement, elementSpanAfter } from './teiutil.mjs';
-import { Collator, readSettings, settingsFromConfig, settingsToConfig, filterCatalogue, scriptRule, alignmentHasWitness } from './collate.mjs';
+import { Collator, readSettings, settingsFromConfig, settingsToConfig, filterCatalogue, conflictMessages, scriptRule, alignmentHasWitness } from './collate.mjs';
 import { AlignMatrix } from './aligner.mjs';
 import saktumivaIgnoreTags from './saktumiva/lib/tagfilters.mjs';
 import { setupMenu, checkForUpdates, showAbout } from './common.mjs';
@@ -2200,7 +2200,7 @@ function tagChecklist(ignored) {
 function openSettings() {
   tagStatsCache = null;
   const C = S.collator, st = C.settings, ap = S.cfg.apparatus || {};
-  const on = new Set(C.filtersindices);
+  const on = new Set(C.selectedIndices);   // what is ticked, also where one normalization overrides another
   const box = (attrs, label, title) => h('label', {class: 'chk', title}, h('input', {type: 'checkbox', ...attrs}), ' ', label);
   // normalizations, grouped as in Saktumiva
   const groups = {};
@@ -2220,6 +2220,7 @@ function openSettings() {
     h('h4', {}, 'Variants to leave out of the apparatus'),
     h('p', {class: 'muted'}, 'Readings that differ from the text only in these ways are not given as variants; Saktumiva keeps them as “minor” readings under the lemma. Turning one on takes effect at once. Turning one off that was used for an existing alignment means that passage is collated again.'),
     ...Object.keys(groups).sort((a, b) => (a === 'general' ? -1 : b === 'general' ? 1 : a === 'sanskrit' ? -1 : b === 'sanskrit' ? 1 : 0)).map(g => filterSet(g, g === 'sanskrit')),
+    h('div', {id: 'set-filter-conflicts', class: 'warning', hidden: true}),
     h('label', {}, 'Letters treated as the same in all witnesses',
       h('input', {id: 'set-same', value: ap.sameLetters || '', placeholder: 'e.g.  ś=s, ṇ=n'})),
     h('h4', {}, 'Witnesses’ own script notes'),
@@ -2261,6 +2262,15 @@ function openSettings() {
     h('div', {class: 'dialog-buttons'}, h('span', {class: 'spacer'}),
       h('button', {type: 'button', onclick: () => $('#info-dialog').close()}, 'Cancel'),
       h('button', {type: 'button', class: 'primary', onclick: applySettings}, 'Apply')));
+  // normalizations that cannot both apply (e.g. "remove avagrahas" and "avagrahas to short a"): say which one wins
+  const showConflicts = () => {
+    const msgs = conflictMessages([...body.querySelectorAll('[data-filter]')].filter(b => b.checked).map(b => Number(b.dataset.filter)));
+    const box = body.querySelector('#set-filter-conflicts');
+    box.replaceChildren(...msgs.map(m => h('p', {}, '⚠ ' + m)));
+    box.hidden = !msgs.length;
+  };
+  body.addEventListener('change', e => { if (e.target.matches?.('[data-filter]')) showConflicts(); });
+  showConflicts();
   $('#info-body').replaceChildren(body);
   $('#info-dialog').classList.add('wide');
   $('#info-dialog').querySelector('.dialog-buttons.outer').hidden = true;

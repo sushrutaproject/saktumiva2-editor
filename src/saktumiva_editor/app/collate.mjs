@@ -121,13 +121,43 @@ export const rowSources = (alignDoc, rows) => {
 export const alignmentHasWitness = (res, {siglum, file}) =>
   (res.rowWits || []).some(r => r.name === siglum || r.siglum === siglum || (!!file && r.file === file));
 
+// Normalizations that cannot both apply. Saktumiva applies the ticked normalizations in the order of its list,
+// and "avagrahas to short a" comes before "remove avagrahas": with both ticked, every avagraha has become an a
+// before "remove avagrahas" runs, which then finds nothing to remove ('tra and tra are atra and tra: a variant).
+// Here the first-named normalization wins and the others are left out, within one language group.
+const OVERRIDES = [{winner: 'remove avagrahas', losers: ['double avagrahas', 'avagrahas to short a']}];
+// For a list of ticked filter indices: [{winner, losers}] (as indices) for each rule that applies
+export const filterConflicts = indices => {
+  const out = [];
+  for (const i of indices) {
+    const f = allFilters[i], rule = OVERRIDES.find(r => r.winner === f.name);
+    if (!rule) continue;
+    const losers = indices.filter(k => rule.losers.includes(allFilters[k].name) && (allFilters[k].group || 'general') === (f.group || 'general'));
+    if (losers.length) out.push({winner: i, losers});
+  }
+  return out;
+};
+// The ticked filters that are really applied
+export const effectiveFilters = indices => {
+  const dropped = new Set(filterConflicts(indices).flatMap(c => c.losers));
+  return indices.filter(i => !dropped.has(i));
+};
+const quoted = names => names.map(n => `“${n}”`).join(' and ');
+// The conflicts in words, for the settings screen
+export const conflictMessages = indices => filterConflicts(indices).map(({winner, losers}) => {
+  const w = `“${allFilters[winner].name}”`, l = quoted(losers.map(i => allFilters[i].name));
+  const many = losers.length > 1;
+  return `${w} is ticked together with ${l}, which contradict${many ? '' : 's'} it. ${w} wins: avagrahas are removed, and ${l} ${many ? 'are' : 'is'} not applied.`;
+});
+
 export class Collator {
   constructor({settings, extraIgnore = [], apparatusOpts = {}, scriptNoteRules = {}, editionFile, editionSiglum}) {
     this.settings = settings;
     this.ignore = [...new Set([...settings.tagfilters, ...extraIgnore])];
     const {indices, unknown} = namesToIndices(settings.filternames);
-    this.filtersindices = indices;
-    this.filtersnames = indices.map(i => allFilters[i].name);
+    this.selectedIndices = indices;                    // as ticked in Settings
+    this.filtersindices = effectiveFilters(indices);   // as applied: see OVERRIDES
+    this.filtersnames = this.filtersindices.map(i => allFilters[i].name);
     this.unknownFilters = unknown;
     this.apparatusOpts = apparatusOpts;
     this.samePairs = parsePairs(apparatusOpts.sameLetters);

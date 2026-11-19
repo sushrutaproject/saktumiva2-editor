@@ -199,6 +199,8 @@ dialog.wide { width: min(860px, 94vw); }
 #settings-form label.chk input[type=checkbox] { display: inline; width: auto; margin: 0 4px 0 0; vertical-align: -1px; }
 #settings-form .cols { columns: 2 300px; column-gap: 24px; padding: 2px 0 6px 18px; }
 #settings-form .cols label.chk { margin: 2px 0; break-inside: avoid; font-size: 13px; }
+#settings-form .warning { margin: 4px 0 8px 18px; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--accent-soft); font-size: 13px; }
+#settings-form .warning p { margin: 2px 0; }
 #settings-form input.num { display: inline-block; width: 7ch; margin: 0 4px; padding: 3px 5px; }
 #settings-form .row { display: flex; gap: 16px; flex-wrap: wrap; }
 #settings-form .row label input.num { display: block; width: 10ch; margin: 4px 0 0; }

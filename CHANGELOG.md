@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.4 (18 November 2026)
 
 * **A hand-corrected alignment is no longer set aside when a witness has scribal corrections.** A witness with an
   `<add>` or `<del>` in the passage is collated as two rows, e.g. *Hac* and *Hpc*. Before using a saved alignment

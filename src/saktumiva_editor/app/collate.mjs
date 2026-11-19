@@ -3,7 +3,7 @@ import { processFile, preProcess, postProcess, findSplitfunc } from './saktumiva
 import { filters as allFilters, filterAll } from './saktumiva/lib/normalize.mjs';
 import { makeApp, getWits, addWitnesses, addApparatus } from './saktumiva/lib/apparatus.mjs';
 import xmlFormat from './saktumiva/lib/xml-formatter.mjs';
-import { parseXML, TEI_NS } from './teiutil.mjs';
+import { parseXML, TEI_NS, xmlid } from './teiutil.mjs';
 
 const XML_NS = 'http://www.w3.org/XML/1998/namespace';
 
@@ -103,6 +103,23 @@ export const scriptNotesOf = doc => [...doc.getElementsByTagNameNS(TEI_NS, 'scri
 export const cleanReadings = listapp => (listapp || '')
   .replace(/<anchor\b[^>]*\/>/g, '').replace(/<anchor\b[^>]*>\s*<\/anchor>/g, '')
   .replace(/\sxml:id="[^"]*"/g, '');
+
+// The witness that each row of an alignment was made from. A row is not always named after its witness:
+// Saktumiva collates a witness that has scribal corrections in the passage (<add>, <del>) as two rows,
+// "Hac" and "Hpc", and the readings a witness reports of other sources (<rdg wit="#X">) as rows of their
+// own. In the alignment's <listWit> such rows are listed inside the witness they come from.
+export const rowSources = (alignDoc, rows) => {
+  const byId = new Map([...alignDoc.querySelectorAll('listWit witness')].map(w => [xmlid(w), w]));
+  return rows.map(name => {
+    const w = byId.get(name);
+    let top = w || null;
+    for (let up = top?.parentNode?.closest('witness'); up; up = up.parentNode?.closest('witness')) top = up;
+    return {name, siglum: (top && xmlid(top)) || name, file: w?.closest('[source]')?.getAttribute('source') || null};
+  });
+};
+// Is this witness (its siglum, its file) one of the rows of the alignment that `res` (from apparatus()) was made of?
+export const alignmentHasWitness = (res, {siglum, file}) =>
+  (res.rowWits || []).some(r => r.name === siglum || r.siglum === siglum || (!!file && r.file === file));
 
 export class Collator {
   constructor({settings, extraIgnore = [], apparatusOpts = {}, scriptNoteRules = {}, editionFile, editionSiglum}) {
@@ -403,12 +420,13 @@ export class Collator {
     if (app.error) return {error: app.error, corrected, compat};
     const mine = `: ${this.siglum} doesn't match alignment`;
     const mismatch = (app.warnings || []).some(w => w.includes(mine));
+    const rows = [...alignDoc.documentElement.children].filter(e => e.localName === 'TEI').map(e => e.getAttribute('n'));
     const formatted = app.listapp ? xmlFormat(`<listApp xmlns="${TEI_NS}">${app.listapp}</listApp>`,
       {indentation: '  ', collapseContent: true, lineSeparator: '\n'}) : `<listApp xmlns="${TEI_NS}"/>`;
     return {listApp: parseXML(formatted, 'apparatus').documentElement, listWit: alignDoc.querySelector('listWit'),
             warnings: (app.warnings || []).filter(w => !w.includes(mine)), mismatch, corrected, compat,
             // a witness's text no longer matches this alignment (its transcription has changed)
             witMismatch: (app.warnings || []).some(w => !w.includes(mine) && w.includes("doesn't match alignment")),
-            rows: [...alignDoc.documentElement.children].filter(e => e.localName === 'TEI').map(e => e.getAttribute('n'))};
+            rows, rowWits: rowSources(alignDoc, rows)};
   }
 }

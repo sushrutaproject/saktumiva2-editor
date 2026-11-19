@@ -1,6 +1,6 @@
 import { TEI_NS, KEY_ATTR, parseXML, xmlid, serializeEl, scanRaw, rangeFromCoords,
          collapseWithMap, mergeText, describeChange, patchElement, elementSpanAfter } from './teiutil.mjs';
-import { Collator, readSettings, settingsFromConfig, settingsToConfig, filterCatalogue, scriptRule } from './collate.mjs';
+import { Collator, readSettings, settingsFromConfig, settingsToConfig, filterCatalogue, scriptRule, alignmentHasWitness } from './collate.mjs';
 import { AlignMatrix } from './aligner.mjs';
 import saktumivaIgnoreTags from './saktumiva/lib/tagfilters.mjs';
 import { setupMenu, checkForUpdates, showAbout } from './common.mjs';
@@ -494,8 +494,9 @@ async function computeResult(id, ser, key, {priority, onProgress}) {
     if (x) {
       try {
         let r = S.collator.apparatus(id, x);
-        // witnesses that now have this passage but are not in the alignment (e.g. ids added since)
-        const missing = r.rows ? S.witnesses.filter(w => witPassage(w.doc, id) && !r.rows.includes(w.siglum)) : [];
+        // witnesses that now have this passage but are not in the alignment (e.g. ids added since).
+        // A witness may be there under other names (Hac and Hpc for H): see alignmentHasWitness
+        const missing = r.rows ? S.witnesses.filter(w => witPassage(w.doc, id) && !alignmentHasWitness(r, w)) : [];
         // a corrected alignment containing text of an element now ignored (e.g. <trailer>): remove that text, keep the corrections
         if (r.corrected && !r.compat.ok && !missing.length) {
           let y = null, r2 = null;
@@ -694,8 +695,7 @@ function dropBatch() { multiRun++; multiStatus.clear(); S.collator?.dropQueued('
 const appKey = (pid, i) => `${pid}|${i}`;
 function renderApp(app, i, pid) {
   const key = appKey(pid, i);
-  const div = h('div', {class: 'app', 'data-key': key,
-    onmouseenter: () => focusApp(key, false), onmouseleave: () => focusApp(null, false), onclick: () => focusApp(key, true)});
+  const div = h('div', {class: 'app', 'data-key': key, onclick: () => focusApp(key, true)});
   const kids = [...app.children];
   const lemGrp = kids.find(k => k.localName === 'rdgGrp' && k.getAttribute('type') === 'lemma');
   const lem = lemGrp ? lemGrp.querySelector('lem') : kids.find(k => k.localName === 'lem');
@@ -731,12 +731,10 @@ function showInText(key) {
 
 function renderRdg(rdg, wits, appIndex, small = false, pid = S.current) {
   const txt = readingText(rdg);
-  const span = h('span', {class: 'rdg', title: 'Witnesses: ' + sigla(wits)},
+  const span = h('span', {class: 'rdg', title: 'Witnesses: ' + sigla(wits), 'data-wits': sigla(wits)},
     txt ? txt : h('span', {class: 'om'}, 'om.'), ' ', h('span', {class: 'sig'}, sigla(wits)));
   if (S.mode === 'read') span.append(h('button', {class: 'use', title: txt ? 'Put this reading in the text' : 'Remove the lemma from the text (follow the omission)',
     onclick: e => { e.stopPropagation(); acceptReading(pid, appIndex, rdg, sigla(wits)); }}, txt ? 'use' : 'omit'));
-  span.addEventListener('mouseenter', () => highlightWits(sigla(wits)));
-  span.addEventListener('mouseleave', () => highlightWits(''));
   return span;
 }
 
@@ -747,6 +745,31 @@ function focusApp(key, sticky) {
   for (const d of document.querySelectorAll('.app')) d.classList.toggle('focus', d.dataset.key === focused);
   paintHighlights(show);
 }
+
+// Pointing at an apparatus entry frames it, lights up its lemma in the text and shows its "↑ text" button;
+// pointing at a reading marks its witnesses. Only when the pointer itself has moved: after a jump from the
+// text the apparatus scrolls under a pointer that is standing still, and the entry that happens to arrive
+// under it must not look like the one jumped to. (So this is not left to CSS :hover or to mouseenter.)
+let pointerAt = '', pointed = null, pointedWits = '';
+function pointAt(target) {
+  const el = target?.closest?.('#apparatus .app') || null;
+  if (el !== pointed) {
+    pointed?.classList.remove('pointed');
+    pointed = el;
+    el?.classList.add('pointed');
+    focusApp(el ? el.dataset.key : null, false);
+  }
+  const wits = target?.closest?.('#apparatus .rdg')?.dataset.wits || '';
+  if (wits !== pointedWits) { pointedWits = wits; highlightWits(wits); }
+}
+for (const type of ['mousemove', 'mousedown'])
+  document.addEventListener(type, e => {
+    const at = `${e.clientX},${e.clientY}`;
+    if (at === pointerAt) return;          // the page moved, not the pointer
+    pointerAt = at;
+    pointAt(e.target);
+  }, true);
+document.documentElement.addEventListener('mouseleave', () => pointAt(null));
 
 function toHtmlRange(r) {
   if (!r) return null;
@@ -784,12 +807,34 @@ $('#passage').addEventListener('click', e => {
   const node = pos ? pos.offsetNode : rng?.startContainer, off = pos ? pos.offset : rng?.startOffset;
   const tn = S.h2t.get(node);
   if (!tn) return;
-  const hit = S.appRanges.find(({range}) => range && range.isPointInRange(tn, Math.min(off, tn.data.length)));
+  // The caret lies between two letters. Where one lemma follows another without a space (two parts of a
+  // compound), it lies at the end of one and the start of the next: go by the letter that was clicked.
+  const ci = letterAt(node, off, e.clientX, e.clientY);
+  const hit = (ci !== null && S.appRanges.find(({range}) => range && range.isPointInRange(tn, ci) && range.isPointInRange(tn, ci + 1)))
+    || S.appRanges.find(({range}) => range && range.isPointInRange(tn, Math.min(off, tn.data.length)));
   if (hit) {
     focusApp(hit.key, true);
-    document.querySelector(`.app[data-key="${CSS.escape(hit.key)}"]`)?.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+    reveal(document.querySelector(`.app[data-key="${CSS.escape(hit.key)}"]`));
   }
 });
+// which letter of a text node is drawn at this point: the one after the caret, or the one before it (null: neither)
+function letterAt(node, off, x, y) {
+  const drawnHere = i => {
+    if (i < 0 || i >= node.data.length) return false;
+    const r = new Range(); r.setStart(node, i); r.setEnd(node, i + 1);
+    return [...r.getClientRects()].some(b => x >= b.left && x <= b.right && y >= b.top && y <= b.bottom);
+  };
+  return drawnHere(off) ? off : drawnHere(off - 1) ? off - 1 : null;
+}
+// Bring an apparatus entry into view: not at all if it can be seen whole, otherwise to the middle of the
+// window (at the very edge it is easily missed).
+function reveal(el) {
+  if (!el) return;
+  const box = el.getBoundingClientRect(), view = (el.closest('#centre') || document.documentElement).getBoundingClientRect();
+  const top = Math.max(view.top, 0), bottom = Math.min(view.bottom, window.innerHeight);
+  if (box.top >= top && box.bottom <= bottom) return;
+  el.scrollIntoView({block: 'center', behavior: 'smooth'});
+}
 
 // ================================================================ accept a reading
 function readingFragment(rdg) {

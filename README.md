@@ -222,7 +222,8 @@ cd tests/js && npm ci && npm test   # the collation regression tests (Node 22)
 ```
 
 The browser tests (`tests/python/test_browser_several.py`: choosing several passages, the combined apparatus,
-going back to one passage; `test_browser_restructure.py`: merging and splitting passages, down to the files on disk) run with Playwright and are skipped without it:
+going back to one passage; `test_browser_restructure.py`: merging and splitting passages, down to the files on disk;
+`test_browser_apparatus.py`: from a word to its apparatus entry, and reading a hand-corrected alignment again) run with Playwright and are skipped without it:
 `python -m pip install -e ".[test,browser]" && python -m playwright install chromium` (an installed Google Chrome
 is used if Playwright's own Chromium is missing).
 

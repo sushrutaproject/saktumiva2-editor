@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+* **A hand-corrected alignment is no longer set aside when a witness has scribal corrections.** A witness with an
+  `<add>` or `<del>` in the passage is collated as two rows, e.g. *Hac* and *Hpc*. Before using a saved alignment
+  the editor checks that every witness that has the passage is in it, and it looked for a row called *H*: finding
+  none, it took the alignment to be out of date and collated the passage afresh. For an alignment corrected by
+  hand this gave the message "Your corrected alignment for this passage no longer fits its text", every time the
+  passage was opened in a new session, although nothing had changed; and Publish then replaced the corrected
+  alignment file with the fresh collation. The corrected file is now used. Other alignment files of such
+  passages are used again too, so these passages open at once instead of being collated again.
+  Corrected alignments that Publish replaced are still in the git history of the project: look for the last
+  commit "Alignment for … corrected by hand" of the passage.
+* **From the text to the apparatus: only the entry jumped to is picked out.** Clicking a word scrolls to its
+  apparatus entry while the pointer stays where it is, so that another entry arrives under the pointer. That one
+  was framed as well, showed its own **↑ text** button and lit up its own lemma and witness, and looked like the
+  place jumped to. Entries and readings now respond to the pointer only when the pointer itself has moved.
+* The entry jumped to is brought to the middle of the window (it used to stop at the very bottom edge), and the
+  view does not move at all if the entry can already be seen.
+* Where one lemma follows another without a space (two parts of a compound, as after splitting a column in
+  "Correct alignment"), a click on the first letter of the second one now finds the second, not the first.
+
 ## 0.6.3 (12 November 2026)
 
 * Apparatus: each entry has a **↑ text** button (shown when you point at the entry, or on the entry you jumped

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.7 (19 November 2026)
 
 * **“remove avagrahas” now works when “avagrahas to short a” is ticked as well.** Saktumiva applies the ticked
   normalizations in the order of its list, where “avagrahas to short a” comes first: with both ticked, every

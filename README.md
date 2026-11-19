@@ -225,7 +225,7 @@ cd tests/js && npm ci && npm test   # the collation regression tests (Node 22)
 
 The browser tests (`tests/python/test_browser_several.py`: choosing several passages, the combined apparatus,
 going back to one passage; `test_browser_restructure.py`: merging and splitting passages, down to the files on disk;
-`test_browser_apparatus.py`: from a word to its apparatus entry, and reading a hand-corrected alignment again) run with Playwright and are skipped without it:
+`test_browser_apparatus.py`: from a word to its apparatus entry, and reading a hand-corrected alignment again; `test_browser_settings.py`: the warning about normalizations that contradict each other) run with Playwright and are skipped without it:
 `python -m pip install -e ".[test,browser]" && python -m playwright install chromium` (an installed Google Chrome
 is used if Playwright's own Chromium is missing).
 
@@ -233,7 +233,7 @@ The regression tests run the editor's collation and apparatus code, with the pin
 (`tests/fixtures`: the Suśrutasaṃhitā Śārīrasthāna and Rasendramaṅgala chapter 1) and compare the alignments,
 apparatus and published `<standOff>` with the stored results in `tests/golden`. `stemma.test.mjs` tests the Stemma view
 on the NeXML of SplitsTree6, Saktumiva and Bio::Phylo (`tests/fixtures/stemma` and the Rasendramaṅgala fixture);
-`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`), `multi.test.mjs` choosing several passages (`app/multi.mjs`), `restructure.test.mjs` merging and splitting passages (`app/restructure.mjs`). They also check that the patch
+`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`), `multi.test.mjs` choosing several passages (`app/multi.mjs`), `avagraha.test.mjs` “remove avagrahas” overriding “avagrahas to short a”, `restructure.test.mjs` merging and splitting passages (`app/restructure.mjs`). They also check that the patch
 still fits and still matters (switching script notes off must change the apparatus of certain passages).
 
 ### Updating Saktumiva

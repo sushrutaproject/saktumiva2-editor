@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+* **“remove avagrahas” now works when “avagrahas to short a” is ticked as well.** Saktumiva applies the ticked
+  normalizations in the order of its list, where “avagrahas to short a” comes first: with both ticked, every
+  avagraha had already become an *a* when “remove avagrahas” had its turn, so that it did nothing. *anye 'tra*
+  and *anye tra* were compared as *anye atra* and *anye tra*, and *'tra* ] *tra* appeared in the apparatus as a
+  variant. Now “remove avagrahas” wins: “avagrahas to short a” and “double avagrahas” are left out while it is
+  ticked. They stay ticked in Settings, and are used again when “remove avagrahas” is unticked. Passages
+  whose alignment was made with the overridden normalizations are collated again (not those corrected by hand).
+* Settings warns when normalizations are ticked that contradict each other, and says which one is applied. The
+  warning appears as soon as the boxes are ticked.
+
 ## 0.6.6 (19 November 2026)
 
 * Publish: new option **Collate all passages afresh (keep the alignments I corrected by hand)**. Normally a

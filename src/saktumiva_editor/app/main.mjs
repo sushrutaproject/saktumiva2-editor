@@ -470,12 +470,15 @@ async function cacheKey(ser, id) {
   const data = [ser, S.collator.signature(), ...wits].join('\u0000');
   return hex(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(data)));
 }
-async function getResult(id, {priority = 'high', onProgress} = {}) {
+// fresh: collate again even where a current alignment file or cached result exists (hand-corrected
+// alignments are still used); for Publish's "Collate all passages afresh"
+async function getResult(id, {priority = 'high', onProgress, fresh = false} = {}) {
   const el = S.byId.get(id); if (!el) return null;
   const ser = serializeEl(el);
   const mem = S.results.get(id);
-  if (mem && mem.hash === ser) return mem.res;
+  if (mem && mem.hash === ser && !(fresh && mem.res?.source !== 'collated' && !mem.res?.corrected)) return mem.res;
   const key = await cacheKey(ser, id);
+  if (fresh) return computeResult(id, ser, key, {priority, onProgress, fresh});
   // share one computation between simultaneous requests for the same passage text
   const inflight = S.inflight.get(key);
   const RANK = {low: 0, batch: 1, high: 1};   // a batch job still running when its passage is opened alone is reused
@@ -484,7 +487,7 @@ async function getResult(id, {priority = 'high', onProgress} = {}) {
   S.inflight.set(key, {priority, promise});
   try { return await promise; } finally { if (S.inflight.get(key)?.promise === promise) S.inflight.delete(key); }
 }
-async function computeResult(id, ser, key, {priority, onProgress}) {
+async function computeResult(id, ser, key, {priority, onProgress, fresh = false}) {
   const t0 = performance.now();
   let res = null;
   const finish = (r, source, alignXML) => { r.source = source; r.alignXML = alignXML; r.ms = Math.round(performance.now() - t0); return r; };
@@ -508,12 +511,12 @@ async function computeResult(id, ser, key, {priority, onProgress}) {
           }
         }
         const current = !r.error && !r.mismatch && !r.witMismatch && !missing.length;
-        if (current && (r.compat.ok || r.corrected)) res = finish(r, 'file', x);
+        if (current && (r.compat.ok || r.corrected) && (!fresh || r.corrected)) res = finish(r, 'file', x);
         else if (r.corrected) staleCorrected = true;
       } catch { /* unreadable alignment file: collate afresh */ }
     }
   }
-  if (!res) try {
+  if (!res && !fresh) try {
     const c = await apiFetch(`/api/cache?block=${encodeURIComponent(id)}&key=${key}`, {cache: 'no-store'});
     if (c.ok) { const x = await c.text(); const r = S.collator.apparatus(id, x); if (!r.error && !r.mismatch && r.compat.ok) res = finish(r, 'cache', x); }
   } catch { /* no cache */ }
@@ -2032,6 +2035,7 @@ function openPublish() {
   $('#pub-intro').textContent = `This writes ${S.publishTo}: your edition (${S.editionFile}) with its notes, followed by Saktumiva's apparatus for each of its ${S.blocks.length} passages. ` +
     `Corrected alignments are used as they are; other passages are collated if needed (the first time this can take a while for long prose passages). ` +
     `Alignment files in ${S.cfg.alignmentsDir || 'alignments'}/ are brought up to date. Your edition file itself is not changed.`;
+  $('#pub-fresh').checked = false; $('#pub-fresh').disabled = false;
   $('#pub-progress').value = 0; $('#pub-status').textContent = ''; $('#pub-result').replaceChildren();
   $('#btn-pub-start').hidden = false; $('#btn-pub-close').hidden = true; $('#btn-pub-cancel').hidden = false; $('#btn-pub-cancel').textContent = 'Cancel';
   $('#publish-dialog').showModal();
@@ -2041,6 +2045,8 @@ async function runPublish() {
   pub = {cancel: false};
   S.mode = 'publish'; updateStatus();
   $('#btn-pub-start').hidden = true;
+  const fresh = $('#pub-fresh').checked; $('#pub-fresh').disabled = true;
+  let kept = 0, recollated = 0;
   const only = new URLSearchParams(location.search).get('publishOnly'); // for testing a part
   const ids = S.blocks.filter(id => !only || id.startsWith(only));
   const doc = S.origDoc.cloneNode(true);
@@ -2054,12 +2060,13 @@ async function runPublish() {
     $('#pub-status').textContent = `${id} — ${done + 1} of ${ids.length}${left !== null && left > 0 ? ` (about ${left} min left)` : ''}`;
     $('#pub-progress').value = done / ids.length;
     let res = null;
-    try { res = await getResult(id, {priority: 'high'}); } catch (e) { skipped.push([id, e.message]); done++; continue; }
+    try { res = await getResult(id, {priority: 'high', fresh}); } catch (e) { skipped.push([id, e.message]); done++; continue; }
     if (!res || res.none || !res.alignXML) { skipped.push([id, res?.reason || 'no alignment']); done++; continue; }
+    if (fresh) { if (res.source === 'collated') recollated++; else if (res.corrected) kept++; }
     try {
       const w = S.collator.publishInto(doc, id, res.alignXML, `${S.cfg.alignmentsDir || 'alignments'}/${id}.xml`);
       if (w.length) warned.push([id, w.join('; ')]);
-      if (S.cfg.writeAlignments !== false && (await alignFileText(id)) !== res.alignXML) alignments[id] = res.alignXML;
+      if (S.cfg.writeAlignments !== false && !sameAlignment(await alignFileText(id), res.alignXML)) alignments[id] = res.alignXML;
     } catch (e) { skipped.push([id, e.message]); }
     done++;
   }
@@ -2070,13 +2077,15 @@ async function runPublish() {
   try { out = splicePublished(doc); } catch (e) { S.mode = 'read'; updateStatus(); $('#pub-status').textContent = 'Not written: ' + e.message; $('#btn-pub-cancel').hidden = true; $('#btn-pub-close').hidden = false; return; }
   const n = ids.length - skipped.length;
   const resp = await (await apiFetch('/api/publish', {method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({content: out, alignments, message: `Published ${S.publishTo}: apparatus for ${n} passages` + (only ? ` (only ${only}…)` : '')})}))
+    body: JSON.stringify({content: out, alignments, message: `Published ${S.publishTo}: apparatus for ${n} passages` + (only ? ` (only ${only}…)` : '') +
+      (fresh ? ` (all collated afresh: ${recollated}; ${kept} corrected by hand kept)` : '')})}))
     .json().catch(e => ({ok: false, errors: [e.message]}));
   S.mode = 'read'; updateStatus();
   $('#btn-pub-cancel').hidden = true; $('#btn-pub-close').hidden = false;
   if (!resp.ok) { $('#pub-status').textContent = 'Not written: ' + (resp.errors || []).join(' '); return; }
   for (const [id, xml] of Object.entries(alignments)) S.alignFile.set(id, xml);
   $('#pub-status').textContent = `Written: ${resp.target} with the apparatus of ${n} passages` +
+    (fresh ? `; ${recollated} passage${recollated === 1 ? '' : 's'} collated afresh, ${kept} alignment${kept === 1 ? '' : 's'} corrected by hand kept as ${kept === 1 ? 'it is' : 'they are'}` : '') +
     (Object.keys(alignments).length ? `, and ${Object.keys(alignments).length} alignment files brought up to date` : '') +
     (resp.commit ? ` — git commit ${resp.commit}.` : '.');
   const parts = [];
@@ -2084,6 +2093,11 @@ async function runPublish() {
   if (warned.length) parts.push(h('p', {}, `Saktumiva reported problems in ${warned.length} passage(s) (also recorded as comments in the file):`), h('ul', {}, ...warned.map(([id, w]) => h('li', {}, `${id}: ${w}`))));
   $('#pub-result').replaceChildren(...parts);
 }
+// Two alignment files are the same alignment if they differ only in the guide tree Saktumiva adds to the
+// header (<xenoData><stemma>), whose node ids are new random ones each time: then the file is not rewritten.
+const sameAlignment = (a, b) => a === b ||
+  (!!a && !!b && a.replace(/<xenoData>[\s\S]*?<\/xenoData>/, '') === b.replace(/<xenoData>[\s\S]*?<\/xenoData>/, ''));
+
 // The published file is the edition file exactly as written, plus: the header lines Saktumiva's
 // pages need, any witnesses added to <listWit>, and the apparatus blocks before </TEI>.
 function splicePublished(doc) {

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+* Publish: new option **Collate all passages afresh (keep the alignments I corrected by hand)**. Normally a
+  passage is collated again only when its text, a witness or the collation settings have changed; with this
+  option every other passage is re-collated too, e.g. after a Saktumiva update or to replace old alignment
+  files. The result says how many passages were collated afresh and how many corrected alignments were kept.
+* Publish no longer rewrites an alignment file that differs only in the guide tree Saktumiva adds to its header
+  (whose node ids are new each time), so re-collating leaves git history clean where nothing really changed.
+
 ## 0.6.5 (18 November 2026)
 
 * **A hand-corrected alignment is no longer set aside when a witness has scribal corrections.** A witness with an

@@ -152,6 +152,8 @@ online until you push. Work cycle: edit → Publish → check the published file
   its command-line `apparatus` tool does. Corrected alignments are used as they are; the rest are collated if
   needed (slow the first time for long prose passages; cached afterwards). Alignment files are brought up to
   date and everything is one git commit. Passages without an apparatus are listed at the end.
+  Tick **Collate all passages afresh** to re-collate every passage you have not corrected by hand (e.g. after a
+  Saktumiva update, or to replace old alignment files); corrected alignments are kept.
 * **Settings** (top bar): the collation and apparatus parameters, stored in `editor.config.json`.
   * *Variants to leave out of the apparatus*: Saktumiva's normalizations (final nasals, visarga sandhi, b/v,
     gemination …). Readings that differ only in these ways become "minor" readings under the lemma.

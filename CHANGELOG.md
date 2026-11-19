@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.6 (19 November 2026)
 
 * Publish: new option **Collate all passages afresh (keep the alignments I corrected by hand)**. Normally a
   passage is collated again only when its text, a witness or the collation settings have changed; with this

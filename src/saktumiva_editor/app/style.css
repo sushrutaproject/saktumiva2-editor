@@ -98,19 +98,20 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: v
 .panel-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
 #apparatus, #notes, #witnesses { font-size: 14px; }
 .app { padding: 5px 8px; border-radius: 6px; border: 1px solid transparent; display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: baseline; }
-.app:hover, .app.focus { background: var(--panel); border-color: var(--line); }
+/* .pointed: the entry the pointer was moved onto (set in main.mjs; not :hover, which also follows scrolling) */
+.app.pointed, .app.focus { background: var(--panel); border-color: var(--line); }
 .app.focus { border-color: var(--accent); }
 .app .lem { font-family: var(--serif); font-size: 16px; font-weight: 600; }
 .app .bracket { color: var(--muted); }
 .app .totext { margin-left: auto; padding: 0 6px; font-size: 12px; line-height: 1.6; visibility: hidden; }
-.app:hover .totext, .app.focus .totext, .app .totext:focus-visible { visibility: visible; }
+.app.pointed .totext, .app.focus .totext, .app .totext:focus-visible { visibility: visible; }
 .rdg { font-family: var(--serif); font-size: 16px; border-radius: 4px; padding: 0 3px; position: relative; }
 .rdg .use { font: 600 11px var(--sans); padding: 1px 8px; position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%);
   display: none; z-index: 3; background: var(--accent); color: #fff; border-color: var(--accent); white-space: nowrap; }
 .rdg .use::after { content: ""; position: absolute; left: 50%; top: 100%; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--accent); }
-.rdg:hover .use { display: block; }
+.app.pointed .rdg:hover .use { display: block; }
 
-.rdg:hover { background: var(--accent-soft); }
+.app.pointed .rdg:hover { background: var(--accent-soft); }
 .sig { font: 600 12px var(--sans); color: var(--accent); }
 .minor { font-size: 12px; color: var(--muted); width: 100%; padding-left: 14px; }
 .minor .rdg { font-size: 13px; }

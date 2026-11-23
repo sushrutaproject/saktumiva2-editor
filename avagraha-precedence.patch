@@ -1,0 +1,303 @@
+From bbfc4ff16a711346b1c7655232f3cf24ea7a5541 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 19 Nov 2026 16:49:58 -0600
+Subject: [PATCH] "remove avagrahas" overrides "avagrahas to short a"; Settings
+ warns of the conflict
+
+Saktumiva applies the ticked normalizations in list order, so with both ticked
+"avagrahas to short a" turned every avagraha into a before "remove avagrahas"
+ran: anye 'tra / anye tra were compared as anye atra / anye tra and reported
+as a variant. Now "remove avagrahas" wins over "avagrahas to short a" and
+"double avagrahas", and the settings screen says so as soon as both are ticked.
+
+Co-Authored-By: Claude Fable 5.2 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01GgKsnqdVDiHS7xncZqaWBf
+---
+ CHANGELOG.md                          | 12 ++++++
+ README.md                             |  4 +-
+ src/saktumiva_editor/app/collate.mjs  | 34 ++++++++++++++-
+ src/saktumiva_editor/app/main.mjs     | 14 +++++-
+ src/saktumiva_editor/app/style.css    |  2 +
+ tests/js/avagraha.test.mjs            | 62 +++++++++++++++++++++++++++
+ tests/python/test_browser_settings.py | 48 +++++++++++++++++++++
+ 7 files changed, 170 insertions(+), 6 deletions(-)
+ create mode 100644 tests/js/avagraha.test.mjs
+ create mode 100644 tests/python/test_browser_settings.py
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 79fdb9f..2975f65 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,17 @@
+ # Changelog
+ 
++## Unreleased
++
++* **“remove avagrahas” now works when “avagrahas to short a” is ticked as well.** Saktumiva applies the ticked
++  normalizations in the order of its list, where “avagrahas to short a” comes first: with both ticked, every
++  avagraha had already become an *a* when “remove avagrahas” had its turn, so that it did nothing. *anye 'tra*
++  and *anye tra* were compared as *anye atra* and *anye tra*, and *'tra* ] *tra* appeared in the apparatus as a
++  variant. Now “remove avagrahas” wins: “avagrahas to short a” and “double avagrahas” are left out while it is
++  ticked. They stay ticked in Settings, and are used again when “remove avagrahas” is unticked. Passages
++  whose alignment was made with the overridden normalizations are collated again (not those corrected by hand).
++* Settings warns when normalizations are ticked that contradict each other, and says which one is applied. The
++  warning appears as soon as the boxes are ticked.
++
+ ## 0.6.6 (19 November 2026)
+ 
+ * Publish: new option **Collate all passages afresh (keep the alignments I corrected by hand)**. Normally a
+diff --git a/README.md b/README.md
+index eadb836..1298f0b 100644
+--- a/README.md
++++ b/README.md
+@@ -225,7 +225,7 @@ cd tests/js && npm ci && npm test   # the collation regression tests (Node 22)
+ 
+ The browser tests (`tests/python/test_browser_several.py`: choosing several passages, the combined apparatus,
+ going back to one passage; `test_browser_restructure.py`: merging and splitting passages, down to the files on disk;
+-`test_browser_apparatus.py`: from a word to its apparatus entry, and reading a hand-corrected alignment again) run with Playwright and are skipped without it:
++`test_browser_apparatus.py`: from a word to its apparatus entry, and reading a hand-corrected alignment again; `test_browser_settings.py`: the warning about normalizations that contradict each other) run with Playwright and are skipped without it:
+ `python -m pip install -e ".[test,browser]" && python -m playwright install chromium` (an installed Google Chrome
+ is used if Playwright's own Chromium is missing).
+ 
+@@ -233,7 +233,7 @@ The regression tests run the editor's collation and apparatus code, with the pin
+ (`tests/fixtures`: the Suśrutasaṃhitā Śārīrasthāna and Rasendramaṅgala chapter 1) and compare the alignments,
+ apparatus and published `<standOff>` with the stored results in `tests/golden`. `stemma.test.mjs` tests the Stemma view
+ on the NeXML of SplitsTree6, Saktumiva and Bio::Phylo (`tests/fixtures/stemma` and the Rasendramaṅgala fixture);
+-`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`), `multi.test.mjs` choosing several passages (`app/multi.mjs`), `restructure.test.mjs` merging and splitting passages (`app/restructure.mjs`). They also check that the patch
++`nexus.test.mjs` the NEXUS export (`tests/fixtures/nexus`), `multi.test.mjs` choosing several passages (`app/multi.mjs`), `avagraha.test.mjs` “remove avagrahas” overriding “avagrahas to short a”, `restructure.test.mjs` merging and splitting passages (`app/restructure.mjs`). They also check that the patch
+ still fits and still matters (switching script notes off must change the apparatus of certain passages).
+ 
+ ### Updating Saktumiva
+diff --git a/src/saktumiva_editor/app/collate.mjs b/src/saktumiva_editor/app/collate.mjs
+index e591b58..bc06b94 100644
+--- a/src/saktumiva_editor/app/collate.mjs
++++ b/src/saktumiva_editor/app/collate.mjs
+@@ -121,13 +121,43 @@ export const rowSources = (alignDoc, rows) => {
+ export const alignmentHasWitness = (res, {siglum, file}) =>
+   (res.rowWits || []).some(r => r.name === siglum || r.siglum === siglum || (!!file && r.file === file));
+ 
++// Normalizations that cannot both apply. Saktumiva applies the ticked normalizations in the order of its list,
++// and "avagrahas to short a" comes before "remove avagrahas": with both ticked, every avagraha has become an a
++// before "remove avagrahas" runs, which then finds nothing to remove ('tra and tra are atra and tra: a variant).
++// Here the first-named normalization wins and the others are left out, within one language group.
++const OVERRIDES = [{winner: 'remove avagrahas', losers: ['double avagrahas', 'avagrahas to short a']}];
++// For a list of ticked filter indices: [{winner, losers}] (as indices) for each rule that applies
++export const filterConflicts = indices => {
++  const out = [];
++  for (const i of indices) {
++    const f = allFilters[i], rule = OVERRIDES.find(r => r.winner === f.name);
++    if (!rule) continue;
++    const losers = indices.filter(k => rule.losers.includes(allFilters[k].name) && (allFilters[k].group || 'general') === (f.group || 'general'));
++    if (losers.length) out.push({winner: i, losers});
++  }
++  return out;
++};
++// The ticked filters that are really applied
++export const effectiveFilters = indices => {
++  const dropped = new Set(filterConflicts(indices).flatMap(c => c.losers));
++  return indices.filter(i => !dropped.has(i));
++};
++const quoted = names => names.map(n => `“${n}”`).join(' and ');
++// The conflicts in words, for the settings screen
++export const conflictMessages = indices => filterConflicts(indices).map(({winner, losers}) => {
++  const w = `“${allFilters[winner].name}”`, l = quoted(losers.map(i => allFilters[i].name));
++  const many = losers.length > 1;
++  return `${w} is ticked together with ${l}, which contradict${many ? '' : 's'} it. ${w} wins: avagrahas are removed, and ${l} ${many ? 'are' : 'is'} not applied.`;
++});
++
+ export class Collator {
+   constructor({settings, extraIgnore = [], apparatusOpts = {}, scriptNoteRules = {}, editionFile, editionSiglum}) {
+     this.settings = settings;
+     this.ignore = [...new Set([...settings.tagfilters, ...extraIgnore])];
+     const {indices, unknown} = namesToIndices(settings.filternames);
+-    this.filtersindices = indices;
+-    this.filtersnames = indices.map(i => allFilters[i].name);
++    this.selectedIndices = indices;                    // as ticked in Settings
++    this.filtersindices = effectiveFilters(indices);   // as applied: see OVERRIDES
++    this.filtersnames = this.filtersindices.map(i => allFilters[i].name);
+     this.unknownFilters = unknown;
+     this.apparatusOpts = apparatusOpts;
+     this.samePairs = parsePairs(apparatusOpts.sameLetters);
+diff --git a/src/saktumiva_editor/app/main.mjs b/src/saktumiva_editor/app/main.mjs
+index 5047c5c..d31054c 100644
+--- a/src/saktumiva_editor/app/main.mjs
++++ b/src/saktumiva_editor/app/main.mjs
+@@ -1,6 +1,6 @@
+ import { TEI_NS, KEY_ATTR, parseXML, xmlid, serializeEl, scanRaw, rangeFromCoords,
+          collapseWithMap, mergeText, describeChange, patchElement, elementSpanAfter } from './teiutil.mjs';
+-import { Collator, readSettings, settingsFromConfig, settingsToConfig, filterCatalogue, scriptRule, alignmentHasWitness } from './collate.mjs';
++import { Collator, readSettings, settingsFromConfig, settingsToConfig, filterCatalogue, conflictMessages, scriptRule, alignmentHasWitness } from './collate.mjs';
+ import { AlignMatrix } from './aligner.mjs';
+ import saktumivaIgnoreTags from './saktumiva/lib/tagfilters.mjs';
+ import { setupMenu, checkForUpdates, showAbout } from './common.mjs';
+@@ -2200,7 +2200,7 @@ function tagChecklist(ignored) {
+ function openSettings() {
+   tagStatsCache = null;
+   const C = S.collator, st = C.settings, ap = S.cfg.apparatus || {};
+-  const on = new Set(C.filtersindices);
++  const on = new Set(C.selectedIndices);   // what is ticked, also where one normalization overrides another
+   const box = (attrs, label, title) => h('label', {class: 'chk', title}, h('input', {type: 'checkbox', ...attrs}), ' ', label);
+   // normalizations, grouped as in Saktumiva
+   const groups = {};
+@@ -2220,6 +2220,7 @@ function openSettings() {
+     h('h4', {}, 'Variants to leave out of the apparatus'),
+     h('p', {class: 'muted'}, 'Readings that differ from the text only in these ways are not given as variants; Saktumiva keeps them as “minor” readings under the lemma. Turning one on takes effect at once. Turning one off that was used for an existing alignment means that passage is collated again.'),
+     ...Object.keys(groups).sort((a, b) => (a === 'general' ? -1 : b === 'general' ? 1 : a === 'sanskrit' ? -1 : b === 'sanskrit' ? 1 : 0)).map(g => filterSet(g, g === 'sanskrit')),
++    h('div', {id: 'set-filter-conflicts', class: 'warning', hidden: true}),
+     h('label', {}, 'Letters treated as the same in all witnesses',
+       h('input', {id: 'set-same', value: ap.sameLetters || '', placeholder: 'e.g.  ś=s, ṇ=n'})),
+     h('h4', {}, 'Witnesses’ own script notes'),
+@@ -2261,6 +2262,15 @@ function openSettings() {
+     h('div', {class: 'dialog-buttons'}, h('span', {class: 'spacer'}),
+       h('button', {type: 'button', onclick: () => $('#info-dialog').close()}, 'Cancel'),
+       h('button', {type: 'button', class: 'primary', onclick: applySettings}, 'Apply')));
++  // normalizations that cannot both apply (e.g. "remove avagrahas" and "avagrahas to short a"): say which one wins
++  const showConflicts = () => {
++    const msgs = conflictMessages([...body.querySelectorAll('[data-filter]')].filter(b => b.checked).map(b => Number(b.dataset.filter)));
++    const box = body.querySelector('#set-filter-conflicts');
++    box.replaceChildren(...msgs.map(m => h('p', {}, '⚠ ' + m)));
++    box.hidden = !msgs.length;
++  };
++  body.addEventListener('change', e => { if (e.target.matches?.('[data-filter]')) showConflicts(); });
++  showConflicts();
+   $('#info-body').replaceChildren(body);
+   $('#info-dialog').classList.add('wide');
+   $('#info-dialog').querySelector('.dialog-buttons.outer').hidden = true;
+diff --git a/src/saktumiva_editor/app/style.css b/src/saktumiva_editor/app/style.css
+index 3f9d589..5b84459 100644
+--- a/src/saktumiva_editor/app/style.css
++++ b/src/saktumiva_editor/app/style.css
+@@ -199,6 +199,8 @@ dialog.wide { width: min(860px, 94vw); }
+ #settings-form label.chk input[type=checkbox] { display: inline; width: auto; margin: 0 4px 0 0; vertical-align: -1px; }
+ #settings-form .cols { columns: 2 300px; column-gap: 24px; padding: 2px 0 6px 18px; }
+ #settings-form .cols label.chk { margin: 2px 0; break-inside: avoid; font-size: 13px; }
++#settings-form .warning { margin: 4px 0 8px 18px; padding: 6px 10px; border-left: 3px solid var(--accent); background: var(--accent-soft); font-size: 13px; }
++#settings-form .warning p { margin: 2px 0; }
+ #settings-form input.num { display: inline-block; width: 7ch; margin: 0 4px; padding: 3px 5px; }
+ #settings-form .row { display: flex; gap: 16px; flex-wrap: wrap; }
+ #settings-form .row label input.num { display: block; width: 10ch; margin: 4px 0 0; }
+diff --git a/tests/js/avagraha.test.mjs b/tests/js/avagraha.test.mjs
+new file mode 100644
+index 0000000..03487a9
+--- /dev/null
++++ b/tests/js/avagraha.test.mjs
+@@ -0,0 +1,62 @@
++// "remove avagrahas" and "avagrahas to short a" (or "double avagrahas") cannot both apply. Saktumiva runs
++// the ticked normalizations in list order, so "avagrahas to short a" used to win silently: anye 'tra / anye tra
++// became anye atra / anye tra, a variant, although "remove avagrahas" was ticked. Now "remove avagrahas" wins,
++// and the settings screen says so.
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import path from 'node:path';
++import { loadSection, FIXTURES, collate, teiutil } from './harness.mjs';
++
++const dir = path.join(FIXTURES, 'sushruta-sarira', 'section');
++const BASE = ['ignore punctuation', 'superfluous avagrahas'];
++const section = extra => loadSection(dir, {collation: {filters: [...BASE, ...extra]}});
++const eqOf = sec => sec.collator._appOpts('SS.3.1.1', teiutil.parseXML(sec.alignment('SS.3.1.1'), 'alignment')).equivalent;
++const names = c => c.filtersnames;
++
++test("only 'avagrahas to short a': 'tra and tra differ (atra / tra)", () => {
++  const sec = section(['double avagrahas', 'avagrahas to short a']);
++  assert.ok(!eqOf(sec)('H', "'tra", 'tra', "'tra", 'tra'));
++  assert.deepEqual(collate.conflictMessages(sec.collator.selectedIndices), []);
++});
++
++test("only 'remove avagrahas': 'tra and tra agree", () => {
++  const sec = section(['remove avagrahas']);
++  assert.ok(eqOf(sec)('H', "'tra", 'tra', "'tra", 'tra'));
++  assert.deepEqual(collate.conflictMessages(sec.collator.selectedIndices), []);
++});
++
++test("both ticked: 'remove avagrahas' wins", () => {
++  const sec = section(['avagrahas to short a', 'remove avagrahas']), c = sec.collator;
++  assert.ok(eqOf(sec)('H', "'tra", 'tra', "'tra", 'tra'));
++  assert.ok(names(c).includes('remove avagrahas') && !names(c).includes('avagrahas to short a'));
++  // what is ticked is remembered for the settings screen
++  const ticked = c.selectedIndices.map(i => collate.filterCatalogue[i].name);
++  assert.ok(ticked.includes('avagrahas to short a') && ticked.includes('remove avagrahas'));
++  // a real variant stays one
++  assert.ok(!eqOf(sec)('H', "'tra", 'tatra', "'tra", 'tatra'));
++});
++
++test("'double avagrahas' gives way too: ''tmā and tmā agree", () => {
++  const sec = section(['double avagrahas', 'avagrahas to short a', 'remove avagrahas']);
++  assert.ok(eqOf(sec)('H', "''tmā", 'tmā', "''tmā", 'tmā'));
++  assert.deepEqual(names(sec.collator).filter(n => /avagraha/.test(n)), ['superfluous avagrahas', 'remove avagrahas']);
++});
++
++test('the settings screen is told about the conflict', () => {
++  const one = collate.conflictMessages(section(['avagrahas to short a', 'remove avagrahas']).collator.selectedIndices);
++  assert.equal(one.length, 1);
++  assert.match(one[0], /“remove avagrahas” is ticked together with “avagrahas to short a”/);
++  assert.match(one[0], /“avagrahas to short a” is not applied/);
++  const two = collate.conflictMessages(section(['double avagrahas', 'avagrahas to short a', 'remove avagrahas']).collator.selectedIndices);
++  assert.match(two[0], /“double avagrahas” and “avagrahas to short a” are not applied/);
++});
++
++test('an alignment made with "avagrahas to short a" is collated again once "remove avagrahas" overrides it', () => {
++  // the stored alignment of the fixture was made with "double avagrahas" and "avagrahas to short a"
++  const doc = teiutil.parseXML(section([]).alignment('SS.3.1.1'), 'alignment');
++  const both = ['double avagrahas', 'avagrahas to short a'];
++  assert.doesNotMatch(section(both).collator.compatible(doc).why.join(), /avagraha/);
++  const now = section([...both, 'remove avagrahas']).collator.compatible(doc);
++  assert.equal(now.ok, false);
++  assert.match(now.why.join(), /double avagrahas, avagrahas to short a/);
++});
+diff --git a/tests/python/test_browser_settings.py b/tests/python/test_browser_settings.py
+new file mode 100644
+index 0000000..9a10e05
+--- /dev/null
++++ b/tests/python/test_browser_settings.py
+@@ -0,0 +1,48 @@
++"""Settings: normalizations that cannot both apply, in a real browser.
++
++Skipped unless Playwright is installed (see test_browser_several.py).
++"""
++import json
++
++import pytest
++
++sync_api = pytest.importorskip('playwright.sync_api')
++
++from test_browser_several import SECTION, browser, page  # noqa: E402,F401 - fixtures
++
++NAMES = """() => window.__editor.S.collator.filtersnames.filter(n => /avagraha/.test(n))"""
++
++
++def box(page, name):
++    return page.locator('#settings-form label.chk', has_text=name).filter(
++        has=page.locator('xpath=ancestor::details[1]/summary[starts-with(normalize-space(), "Sanskrit")]')).locator('input')
++
++
++def test_remove_avagrahas_overrides_avagrahas_to_short_a_and_settings_says_so(page, sushruta):
++    page.locator('#btn-info').click()
++    warning = page.locator('#set-filter-conflicts')
++    short_a, remove = box(page, 'avagrahas to short a'), box(page, 'remove avagrahas')
++    assert short_a.is_checked() and not remove.is_checked()
++    assert warning.is_hidden()
++
++    # ticking the second one brings the warning at once; unticking it takes the warning away
++    remove.check()
++    assert warning.is_visible()
++    text = warning.inner_text()
++    assert '“remove avagrahas” is ticked together with' in text and '“avagrahas to short a”' in text
++    assert 'not applied' in text
++    remove.uncheck()
++    assert warning.is_hidden()
++
++    # applied with both ticked: both stay ticked (and saved), but only "remove avagrahas" is used
++    remove.check()
++    with page.expect_navigation():   # applying settings reloads the editor
++        page.get_by_role('button', name='Apply').click()
++    page.wait_for_function('window.__editor && window.__editor.S.current && window.__editor.S.collator')
++    saved = json.loads((sushruta / SECTION / 'editor.config.json').read_text(encoding='utf-8'))['collation']['filters']
++    assert 'avagrahas to short a' in saved and 'remove avagrahas' in saved
++    used = page.evaluate(NAMES)
++    assert 'remove avagrahas' in used and 'avagrahas to short a' not in used and 'double avagrahas' not in used
++    page.locator('#btn-info').click()
++    assert box(page, 'avagrahas to short a').is_checked() and box(page, 'remove avagrahas').is_checked()
++    assert page.locator('#set-filter-conflicts').is_visible()
+-- 
+2.43.0
+
